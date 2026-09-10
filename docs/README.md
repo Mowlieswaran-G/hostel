@@ -48,7 +48,7 @@ endpoints.
 ## 📸 Preview
 
 <div align="center">
-  <img src="./docs/screenshot-dashboard.png" alt="SmartHostel dashboard preview" width="800" />
+  <img src="./docs/Screenshot 2026-09-10 102759.png" alt="SmartHostel dashboard preview" width="800" />
 </div>
 
 > Add a real screenshot or GIF at `docs/screenshot-dashboard.png` (create the `docs/` folder in
