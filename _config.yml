@@ -11,16 +11,17 @@ exclude:
   - README.md
   - package.json
   - package-lock.json
-
-# Include hidden files/folders that should be built
-include:
-  - .github
-
-# Set the source directory
-source: .
-destination: _site
+  - "*/node_modules/**"
+  - "**/node_modules/**"
+  - "server/**"
+  - "client/**"
 
 # Build settings
 plugins:
   - jekyll-github-metadata
   - jekyll-seo-tag
+
+# Don't process markdown in dependencies
+markdown: kramdown
+kramdown:
+  input: GFM
