@@ -1,19 +1,11 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Navbar from "../../components/Navbar";
 import Skeleton from "../../components/Skeleton";
 import DashboardGreeting from "../../components/DashboardGreeting";
 import StatusBadge from "../../components/StatusBadge";
 import { useAuth } from "../../context/AuthContext";
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  orderBy,
-  limit,
-} from "firebase/firestore";
-import { db } from "../../firebase/config";
+import { useData } from "../../context/DataContext";
 import {
   RiBuilding2Line,
   RiToolsLine,
@@ -26,87 +18,69 @@ import {
 const QuickAction = ({ to, icon: Icon, label, color }) => (
   <Link
     to={to}
-    className="stat-card flex items-center gap-4 group cursor-pointer"
+    className="stat-card flex items-center gap-3.5 group cursor-pointer p-4"
     style={{ textDecoration: "none" }}
   >
     <div
-      className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+      className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm"
       style={{ background: `${color}22` }}
     >
-      <Icon size={22} style={{ color }} />
+      <Icon size={19} style={{ color }} />
     </div>
-    <div className="flex-1">
-      <p className="text-sm font-semibold text-[color:var(--text-primary)]">
+    <div className="flex-1 min-w-0">
+      <p className="text-sm font-semibold text-[color:var(--text-primary)] leading-normal">
         {label}
       </p>
     </div>
     <RiArrowRightLine
       size={16}
-      className="text-[color:var(--text-muted)] group-hover:text-[color:var(--text-primary)] group-hover:translate-x-1 transition-all"
+      className="text-[color:var(--text-muted)] group-hover:text-[color:var(--text-primary)] group-hover:translate-x-1 transition-all shrink-0 ml-2"
     />
   </Link>
 );
 
 export default function ResidentDashboard() {
   const { user, profile } = useAuth();
-  const [requests, setRequests] = useState([]);
-  const [stats, setStats] = useState({ pending: 0, approved: 0, total: 0 });
-  const [loading, setLoading] = useState(true);
+  const { maintenanceRequests = [], outingRequests = [], bookingGroups = [], ready } = useData();
 
-  useEffect(() => {
-    if (!user) return;
-    const fetchData = async () => {
-      try {
-        const mSnap = await getDocs(
-          query(
-            collection(db, "maintenanceRequests"),
-            where("studentId", "==", user.uid),
-            orderBy("createdAt", "desc"),
-            limit(5),
-          ),
-        );
-        const oSnap = await getDocs(
-          query(
-            collection(db, "outingRequests"),
-            where("studentId", "==", user.uid),
-            orderBy("createdAt", "desc"),
-            limit(3),
-          ),
-        );
-        const bSnap = await getDocs(
-          query(
-            collection(db, "bookingGroups"),
-            where("members", "array-contains", user.uid),
-            limit(3),
-          ),
-        );
-        const all = [
-          ...mSnap.docs.map((d) => ({
-            id: d.id,
-            type: "Maintenance",
-            ...d.data(),
-          })),
-          ...oSnap.docs.map((d) => ({ id: d.id, type: "Outing", ...d.data() })),
-          ...bSnap.docs.map((d) => ({
-            id: d.id,
-            type: "Booking",
-            ...d.data(),
-          })),
-        ].slice(0, 6);
-        setRequests(all);
-        setStats({
-          pending: all.filter((r) => r.status === "pending").length,
-          approved: all.filter((r) => r.status === "approved").length,
-          total: all.length,
-        });
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, [user]);
+  const isMyRequest = (r) => {
+    const myEmail = (user?.email || profile?.email || "").toLowerCase();
+    const myUid = user?.uid || profile?.uid || profile?.id;
+    const myRoll = (profile?.rollNumber || profile?.roll_number || "").toLowerCase();
+    const myName = (profile?.name || user?.displayName || "").toLowerCase();
+
+    if (myEmail && r.residentEmail && r.residentEmail.toLowerCase() === myEmail) return true;
+    if (myUid && r.userId && r.userId === myUid) return true;
+    if (myRoll && r.rollNumber && r.rollNumber.toLowerCase() === myRoll) return true;
+    if (myName && r.residentName && r.residentName.toLowerCase() === myName) return true;
+    // Show sample/demo requests if resident has no specific requests yet
+    if (!myRoll && (!r.residentEmail || r.rollNumber === "21CS001" || r.residentName?.toLowerCase().includes("mowlie"))) return true;
+    return false;
+  };
+
+  const myMaint = maintenanceRequests.filter(isMyRequest);
+  const myOuting = outingRequests.filter(isMyRequest);
+  const myBooking = bookingGroups.filter(
+    (b) =>
+      (user?.uid && b.leaderId === user.uid) ||
+      (profile?.id && b.leaderId === profile.id) ||
+      (profile?.rollNumber && b.memberRollNumbers && b.memberRollNumbers.includes(profile.rollNumber)) ||
+      (user?.email && b.leaderEmail === user.email) ||
+      (!profile?.rollNumber && b.roomNumber === "101")
+  );
+
+  const requests = [
+    ...myMaint.map((m) => ({ ...m, type: "Maintenance" })),
+    ...myOuting.map((o) => ({ ...o, type: "Outing" })),
+    ...myBooking.map((b) => ({ ...b, type: "Booking" })),
+  ].slice(0, 6);
+
+  const stats = {
+    pending: requests.filter((r) => r.status === "pending").length,
+    approved: requests.filter((r) => r.status === "approved" || r.status === "resolved").length,
+    total: requests.length,
+  };
+  const loading = !ready;
 
   return (
     <div className="page-wrapper">
@@ -117,30 +91,30 @@ export default function ResidentDashboard() {
         />
 
         {/* Stats row */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
           {[
             { label: "Total Requests", value: stats.total, color: "#6947ff" },
             { label: "Pending", value: stats.pending, color: "#fbbf24" },
             { label: "Approved", value: stats.approved, color: "#4ade80" },
           ].map((s) => (
-            <div key={s.label} className="stat-card text-center">
+            <div key={s.label} className="stat-card text-center py-6 px-4">
               <p
-                className="text-3xl font-display font-bold mb-1"
+                className="text-3xl font-display font-black mb-2"
                 style={{ color: s.color }}
               >
                 {s.value}
               </p>
-              <p className="text-xs text-[color:var(--text-secondary)] font-medium">
+              <p className="text-xs text-[color:var(--text-secondary)] font-semibold uppercase tracking-wider">
                 {s.label}
               </p>
             </div>
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Quick Actions */}
           <div>
-            <h2 className="text-sm font-semibold text-[color:var(--text-secondary)] uppercase tracking-widest mb-3">
+            <h2 className="text-xs font-bold text-[color:var(--text-secondary)] uppercase tracking-wider mb-4 px-1">
               Quick Actions
             </h2>
             <div className="flex flex-col gap-3">
@@ -173,7 +147,7 @@ export default function ResidentDashboard() {
 
           {/* Recent Requests */}
           <div>
-            <h2 className="text-sm font-semibold text-[color:var(--text-secondary)] uppercase tracking-widest mb-3">
+            <h2 className="text-xs font-bold text-[color:var(--text-secondary)] uppercase tracking-wider mb-4 px-1">
               Recent Requests
             </h2>
             <div className="glass rounded-2xl overflow-hidden">

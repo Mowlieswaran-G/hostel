@@ -13,64 +13,77 @@ import GreetingText from "./GreetingText";
 import toast from "react-hot-toast";
 import { RiShieldLine, RiHomeLine, RiWrenchLine } from "react-icons/ri";
 import googleLogo from "../../assets/google-logo.webp";
-import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../firebase/config";
+import api from "../../services/api";
+import ThemeToggle from "../../components/ThemeToggle";
 
 const ROLE_META = {
   resident: {
     align: "center",
     icon: RiHomeLine,
-    help: "Use your college Google account",
+    help: "Sign in with credentials or college Google account",
     color: "#6947ff",
   },
   warden: {
     align: "center",
     icon: RiShieldLine,
-    help: "Use the demo account or your warden Google account",
+    help: "Sign in with warden credentials or Google account",
     color: "#22c55e",
   },
   technician: {
     align: "center",
     icon: RiWrenchLine,
-    help: "Use the demo account or your technician Google account",
+    help: "Sign in with technician credentials or Google account",
     color: "#f59e0b",
   },
 };
 
-// Demo credentials for warden and technician
+// Demo credentials for quick testing
 const DEMO_CREDS = {
-  warden: { email: "warden@smarthostel.com", password: "warden@123" },
-  technician: { email: "technician@smarthostel.com", password: "tech@123" },
+  warden: {
+    username: "warden",
+    email: "warden@smarthostel.com",
+    password: "warden@123",
+    name: "Warden Demo",
+  },
+  technician: {
+    username: "technician",
+    email: "technician@smarthostel.com",
+    password: "tech@123",
+    name: "Technician Demo",
+  },
 };
 
-// Star field component
+// Sparkles & Star field component (Visible in both dark & light/white theme)
 function Stars() {
-  const stars = Array.from({ length: 80 }, (_, i) => ({
-    id: i,
-    x: Math.random() * 100,
-    y: Math.random() * 100,
-    size: Math.random() * 2 + 0.5,
-    duration: (Math.random() * 3 + 2).toFixed(1),
-    delay: (Math.random() * 4).toFixed(1),
-  }));
+  const sparkles = Array.from({ length: 85 }, (_, i) => {
+    const isDiamond = i % 5 === 0;
+    return {
+      id: i,
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      size: isDiamond ? Math.random() * 4 + 4 : Math.random() * 2.5 + 1.2,
+      duration: (Math.random() * 3 + 2).toFixed(1),
+      delay: (Math.random() * 4).toFixed(1),
+      isDiamond,
+      type: i % 3,
+    };
+  });
 
   return (
-    <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-      {stars.map((s) => (
+    <div className="login-sparkles fixed inset-0 overflow-hidden pointer-events-none z-0">
+      {sparkles.map((s) => (
         <div
           key={s.id}
-          className="absolute rounded-full bg-white"
+          className={`login-sparkle ${s.isDiamond ? "sparkle-diamond" : "sparkle-dot"} sparkle-type-${s.type}`}
           style={{
             left: `${s.x}%`,
             top: `${s.y}%`,
             width: `${s.size}px`,
             height: `${s.size}px`,
-            animationName: "twinkle",
             animationDuration: `${s.duration}s`,
             animationDelay: `${s.delay}s`,
-            animationIterationCount: "infinite",
-            animationDirection: "alternate",
-            animationTimingFunction: "ease-in-out",
           }}
         />
       ))}
@@ -84,9 +97,25 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
+  const [showAutofill, setShowAutofill] = useState(false);
   const cardRef = useRef(null);
+  const emailWrapperRef = useRef(null);
   const navigate = useNavigate();
   const { user, role: authRole, loading: authLoading } = useAuth();
+
+  // Close floating autofill when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (
+        emailWrapperRef.current &&
+        !emailWrapperRef.current.contains(e.target)
+      ) {
+        setShowAutofill(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -119,33 +148,33 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const result = await signInWithGoogle();
-      const { email, displayName, uid } = result.user;
+      const { email: userEmail, displayName, uid } = result.user;
 
       // Validate email against selected role
-      const validation = validateRoleEmail(email, selectedRole);
+      const validation = validateRoleEmail(userEmail, selectedRole);
       if (!validation.valid) {
-        await result.user.delete().catch(() => {}); // revoke if mismatched
+        await result.user.delete().catch(() => { }); // revoke if mismatched
         toast.error(validation.message);
         setLoading(false);
         return;
       }
 
-      // Ensure Firestore profile exists with correct role
-      const userRef = doc(db, "users", uid);
-      const userSnap = await getDoc(userRef);
-      if (!userSnap.exists()) {
-        await setDoc(userRef, {
+      // Non-blocking background sync to Firestore (does not delay sign-in)
+      setDoc(
+        doc(db, "users", uid),
+        {
           uid,
-          email,
-          name: displayName || nameFromEmail(email),
+          email: userEmail,
+          name: displayName || nameFromEmail(userEmail),
           role: selectedRole,
           createdAt: serverTimestamp(),
-        });
-      }
+        },
+        { merge: true }
+      ).catch(() => { });
 
-      // Persist login info for greeting
-      persistLoginInfo(email);
-      toast.success(`Welcome, ${displayName || nameFromEmail(email)}!`);
+      // Persist login info for greeting with clean name
+      persistLoginInfo(userEmail, displayName || nameFromEmail(userEmail));
+      toast.success(`Welcome, ${displayName || nameFromEmail(userEmail)}!`);
       navigate(`/${selectedRole}`, { replace: true });
     } catch (err) {
       console.error(err);
@@ -158,57 +187,88 @@ export default function LoginPage() {
     }
   };
 
-  const handleEmailSignIn = () => {
+  const handleEmailSignIn = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
     setAuthError("");
     setLoading(true);
 
     const trimmedEmail = email.trim().toLowerCase();
     const demoCreds = DEMO_CREDS[selectedRole];
-    const isDemoRole =
-      selectedRole === "warden" || selectedRole === "technician";
 
-    // ── Local (no Firebase) auth for warden / technician ──
-    if (isDemoRole) {
-      if (!demoCreds) {
-        setAuthError("No demo account configured for this role.");
-        setLoading(false);
-        return;
-      }
-      if (trimmedEmail !== demoCreds.email.toLowerCase()) {
-        setAuthError(`Incorrect email. Expected: ${demoCreds.email}`);
-        setLoading(false);
-        return;
-      }
-      if (password !== demoCreds.password) {
-        setAuthError("Incorrect password. Please try again.");
-        setLoading(false);
-        return;
-      }
+    // 1. Instant match with demo credentials (by email or username)
+    const isDemoMatch =
+      demoCreds &&
+      (trimmedEmail === demoCreds.email.toLowerCase() ||
+        trimmedEmail === (demoCreds.username || "").toLowerCase()) &&
+      password === demoCreds.password;
 
-      // ✅ Credentials match — create a local mock session
+    if (isDemoMatch) {
       const mockProfile = {
-        uid: `mock-${selectedRole}`,
+        uid:
+          selectedRole === "resident"
+            ? "demo-student-1"
+            : `mock-${selectedRole}`,
+        id:
+          selectedRole === "resident"
+            ? "demo-student-1"
+            : `mock-${selectedRole}`,
         email: demoCreds.email,
-        name: selectedRole === "warden" ? "Warden Demo" : "Technician Demo",
+        name:
+          demoCreds.name ||
+          `${selectedRole.charAt(0).toUpperCase() + selectedRole.slice(1)} Demo`,
         role: selectedRole,
+        rollNumber: selectedRole === "resident" ? "21CS001" : undefined,
+        roomNumber: selectedRole === "resident" ? "101" : undefined,
+        floor: selectedRole === "resident" ? 1 : undefined,
       };
       setMockSession(mockProfile);
-      persistLoginInfo(demoCreds.email);
+      persistLoginInfo(demoCreds.email, mockProfile.name);
       toast.success(`Welcome, ${mockProfile.name}!`);
-      // Force a page reload so AuthContext re-reads localStorage
       window.location.href = `/${selectedRole}`;
       return;
     }
 
-    // ── Resident: shouldn't reach here (uses Google sign-in) ──
-    setAuthError("Please use Google sign-in for resident accounts.");
+    // 2. Authenticate via backend API (MySQL)
+    try {
+      const res = await api.post("/auth/login", {
+        email: trimmedEmail,
+        password,
+        role: selectedRole,
+      });
+
+      if (res.data?.user) {
+        const userObj = res.data.user;
+        setMockSession(userObj);
+        persistLoginInfo(trimmedEmail, userObj.name);
+        toast.success(`Welcome, ${userObj.name || "User"}!`);
+        window.location.href = `/${selectedRole}`;
+        return;
+      }
+    } catch (err) {
+      console.warn("API login failed:", err);
+      const msg =
+        err.response?.data?.error ||
+        "Invalid user name or password. Please check your credentials.";
+      setAuthError(msg);
+      toast.error(msg);
+      setLoading(false);
+      return;
+    }
+
+    setAuthError("Invalid credentials. Please try again.");
     setLoading(false);
   };
 
   const meta = ROLE_META[selectedRole];
+  const demoCreds = DEMO_CREDS[selectedRole];
 
   return (
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
+      {/* Top right theme toggle */}
+      <div className="absolute top-4 right-4 z-30">
+        <ThemeToggle />
+      </div>
+
       {/* Moonlit background */}
       <div className="moonlit-bg" />
       <Stars />
@@ -238,8 +298,8 @@ export default function LoginPage() {
         ref={cardRef}
         onPointerMove={handlePointerMove}
         onPointerLeave={handlePointerLeave}
-        className="tilt-card relative z-10 w-full mx-4 animate-slide-up"
-        style={{ maxWidth: "440px" }}
+        className="tilt-card relative z-10 w-full mx-3 animate-slide-up"
+        style={{ maxWidth: "370px" }}
       >
         <div
           style={{
@@ -247,179 +307,237 @@ export default function LoginPage() {
             backdropFilter: "blur(24px) saturate(1.3)",
             WebkitBackdropFilter: "blur(24px) saturate(1.3)",
             border: "1px solid var(--glass-border-lg)",
-            borderRadius: "26px",
-            padding: "2.5rem 2rem",
-            boxShadow: `0 0 60px rgba(105,71,255,0.15), 0 20px 60px rgba(0,0,0,0.2), 0 1px 0 var(--glass-border) inset`,
+            borderRadius: "18px",
+            padding: "1.6rem 1.35rem",
+            boxShadow: `0 0 45px rgba(105,71,255,0.12), 0 16px 36px rgba(0,0,0,0.25), 0 1px 0 var(--glass-border) inset`,
           }}
         >
           {/* Brand */}
-          <div className="text-center mb-7">
+          <div className="flex flex-col items-center justify-center text-center mb-3.5 w-full">
             <div
-              className="w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center animate-glow-pulse"
+              className="w-10 h-10 rounded-xl mb-2 flex items-center justify-center p-2 animate-glow-pulse shadow-md shrink-0 border border-white/10"
               style={{
                 background: `linear-gradient(135deg, ${meta.color}, ${meta.color}88)`,
+                margin: "0 auto",
               }}
             >
-              <meta.icon size={28} color="white" />
+              <img
+                src="/hostel-logo.png"
+                alt="SmartHostel"
+                className="w-full h-full object-contain filter brightness-0 invert"
+              />
             </div>
-            <h1 className="font-display text-2xl font-bold text-[color:var(--text-primary)] mb-1">
+            <h1 className="font-display text-xl font-bold text-[color:var(--text-primary)] leading-tight">
               SmartHostel
             </h1>
-            <p className="text-sm text-[color:var(--text-secondary)]">
+            <p className="text-xs text-[color:var(--text-secondary)] mt-0.5">
               Hostel Management Platform
             </p>
           </div>
 
           {/* First-visit / welcome-back greeting */}
-          <GreetingText />
-          <div className="h-6"></div>
-          {/* Role Selector */}
-          <div className="mb-6">
-            <p className="text-xs font-semibold text-[color:var(--text-muted)] uppercase tracking-widest mb-2">
-              Sign in as
-            </p>
-            <RoleSelector value={selectedRole} onChange={setSelectedRole} />
+          <div className="flex justify-center mb-3">
+            <GreetingText />
           </div>
 
-          {/* Demo credentials hint for warden / technician */}
-          {(selectedRole === "warden" || selectedRole === "technician") &&
-            DEMO_CREDS[selectedRole] && (
-              <div
-                className="mb-5 rounded-2xl p-4 border"
-                style={{
-                  background: `${meta.color}12`,
-                  borderColor: `${meta.color}35`,
-                }}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <p
-                      className="text-xs font-bold uppercase tracking-wider mb-2"
-                      style={{ color: meta.color }}
-                    >
-                      Demo Account
-                    </p>
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-semibold uppercase text-[color:var(--text-muted)] w-16 shrink-0">
-                          Email
-                        </span>
-                        <span className="text-xs font-mono text-[color:var(--text-primary)] truncate">
-                          {DEMO_CREDS[selectedRole].email}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-semibold uppercase text-[color:var(--text-muted)] w-16 shrink-0">
-                          Password
-                        </span>
-                        <span className="text-xs font-mono text-[color:var(--text-primary)]">
-                          {DEMO_CREDS[selectedRole].password}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEmail(DEMO_CREDS[selectedRole].email);
-                      setPassword(DEMO_CREDS[selectedRole].password);
-                    }}
-                    className="shrink-0 text-[11px] font-semibold px-3 py-1.5 rounded-xl border transition-all cursor-pointer"
+          {/* Role Selector */}
+          <div className="mb-3.5">
+            <p className="text-[10px] font-semibold text-[color:var(--text-muted)] uppercase tracking-widest mb-1.5">
+              Sign in as
+            </p>
+            <RoleSelector
+              value={selectedRole}
+              onChange={(newRole) => {
+                setSelectedRole(newRole);
+                setShowAutofill(false);
+                setAuthError("");
+                setEmail("");
+                setPassword("");
+              }}
+            />
+          </div>
+
+          {/* Unified Credentials Form (Resident, Warden & Technician) */}
+          <form onSubmit={handleEmailSignIn} className="space-y-3">
+            <div className="space-y-2">
+              {/* Username / Email field with on-focus floating autofill */}
+              <div ref={emailWrapperRef} className="relative">
+                <label
+                  htmlFor="email"
+                  className="input-label"
+                  style={{ fontSize: "0.75rem", marginBottom: "0.2rem" }}
+                >
+                  User Name
+                </label>
+                <input
+                  id="email"
+                  type="text"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onFocus={() => setShowAutofill(true)}
+                  onClick={() => setShowAutofill(true)}
+                  className="input-field"
+                  style={{
+                    padding: "0.55rem 0.8rem",
+                    fontSize: "0.82rem",
+                    borderRadius: "10px",
+                  }}
+                  placeholder="Enter User Name"
+                  disabled={loading}
+                  autoComplete="off"
+                />
+
+                {/* Floating Auto-fill Dropdown: Appears ONLY when clicking/focusing username, ZERO layout disturbance */}
+                {showAutofill && demoCreds && (
+                  <div
+                    onMouseDown={(e) => e.preventDefault()}
+                    className="absolute left-0 right-0 top-full mt-1.5 z-40 rounded-xl p-2.5 shadow-2xl animate-scale-in"
                     style={{
-                      color: meta.color,
-                      borderColor: `${meta.color}50`,
-                      background: `${meta.color}15`,
+                      background: "rgba(20, 22, 34, 0.97)",
+                      backdropFilter: "blur(20px)",
+                      WebkitBackdropFilter: "blur(20px)",
+                      border: `1px solid ${meta.color}60`,
+                      boxShadow: `0 14px 30px rgba(0,0,0,0.6), 0 0 18px ${meta.color}25`,
                     }}
                   >
-                    Auto-fill
-                  </button>
-                </div>
-              </div>
-            )}
+                    <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-white/10">
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className="w-2 h-2 rounded-full animate-pulse shrink-0"
+                          style={{ background: meta.color }}
+                        />
+                        <span
+                          className="text-[10px] font-bold uppercase tracking-wider"
+                          style={{ color: meta.color }}
+                        >
+                          Auto-fill demo {selectedRole}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowAutofill(false)}
+                        className="text-white/40 hover:text-white/90 text-xs px-1 leading-none cursor-pointer"
+                        title="Dismiss"
+                      >
+                        ✕
+                      </button>
+                    </div>
 
-          {/* Email / Password */}
-          <div className="space-y-5 mb-6">
-            <div>
-              <label htmlFor="email" className="input-label">
-                Email address
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="input-field"
-                placeholder="name@example.com"
-                disabled={loading}
-              />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEmail(demoCreds.email);
+                        setPassword(demoCreds.password);
+                        setShowAutofill(false);
+                        toast.success("Credentials autofilled!");
+                      }}
+                      className="w-full flex items-center justify-between gap-2 p-2 rounded-lg transition-all text-left cursor-pointer hover:brightness-110 active:scale-[0.98]"
+                      style={{
+                        background: `${meta.color}15`,
+                        border: `1px solid ${meta.color}35`,
+                      }}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11px] font-mono text-white/95 truncate font-semibold">
+                          {demoCreds.email}
+                        </p>
+                        <p className="text-[10px] text-white/50 font-mono mt-0.5">
+                          Password: {demoCreds.password}
+                        </p>
+                      </div>
+                      <span
+                        className="shrink-0 text-[10px] font-bold px-2.5 py-1 rounded-md border text-white shadow-sm"
+                        style={{
+                          background: meta.color,
+                          borderColor: meta.color,
+                        }}
+                      >
+                        Auto-fill
+                      </span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label
+                  htmlFor="password"
+                  className="input-label"
+                  style={{ fontSize: "0.75rem", marginBottom: "0.2rem" }}
+                >
+                  Password
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="input-field"
+                  style={{
+                    padding: "0.55rem 0.8rem",
+                    fontSize: "0.82rem",
+                    borderRadius: "10px",
+                  }}
+                  placeholder="Enter Your Password"
+                  disabled={loading}
+                />
+              </div>
             </div>
-            <div>
-              <label htmlFor="password" className="input-label">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="input-field"
-                placeholder="Enter your password"
-                disabled={loading}
-              />
-            </div>
-            <div className="h-4"></div>
-            <div className="space-y-4">
+
+            <div className="space-y-2 pt-1">
               <button
-                type="button"
+                type="submit"
                 className="btn-primary w-full"
-                onClick={handleEmailSignIn}
+                style={{
+                  padding: "0.58rem 1rem",
+                  fontSize: "0.84rem",
+                  borderRadius: "10px",
+                }}
                 disabled={loading || !email || !password}
               >
                 {loading ? "Signing in..." : "Login"}
               </button>
-              <p
-                style={{
-                  textAlign: "center",
-                  color: "var(--text-muted)",
-                  fontSize: "0.85rem",
-                }}
-              >
-                Or
-              </p>
+              <div className="flex items-center gap-2 my-1.5">
+                <div className="flex-1 h-px bg-white/10" />
+                <span className="text-[10px] text-[color:var(--text-muted)] uppercase tracking-wider">
+                  or
+                </span>
+                <div className="flex-1 h-px bg-white/10" />
+              </div>
               <button
                 id="btn-google-signin"
+                type="button"
                 onClick={handleGoogleSignIn}
                 disabled={loading}
                 className="btn-google w-full"
+                style={{
+                  padding: "0.55rem 1rem",
+                  fontSize: "0.82rem",
+                  borderRadius: "10px",
+                }}
               >
                 {loading ? (
-                  <div
-                    className="w-5 h-3 rounded-full border-2 border-gray-300 border-t-gray-600"
-                    style={{ animation: "spin 0.7s linear infinite" }}
-                  />
+                  <div className="w-4 h-4 rounded-full border-2 border-gray-300 border-t-gray-600 animate-spin" />
                 ) : (
                   <img
                     src={googleLogo}
                     alt="Google logo"
-                    className="w-7 h-5 object-contain"
+                    className="w-4 h-4 object-contain"
                   />
                 )}
                 <span>{loading ? "Signing in..." : "Sign in with Google"}</span>
               </button>
             </div>
-          </div>
+          </form>
 
           {authError ? (
-            <p className="text-center text-sm text-red-300 mb-4">{authError}</p>
+            <p className="text-center text-xs text-red-300 mt-2 mb-1">{authError}</p>
           ) : null}
 
           {/* Helper text */}
-          <p className="text-center text-xs text-[color:var(--text-muted)]">
+          <p className="text-center text-[11px] text-[color:var(--text-muted)] mt-3">
             {meta.help}
           </p>
-
-          {/* Security note */}
-          <div className="mt-6 pt-5 border-t border-white/5"></div>
         </div>
       </div>
     </div>

@@ -91,13 +91,13 @@ export default function BookingApproval() {
                             <div className="flex items-center gap-2">
                               <button
                                 onClick={() => handleApprove(booking)}
-                                className="px-3 py-1 bg-green-500/10 text-green-500 hover:bg-green-500/20 rounded-lg text-xs font-semibold transition-colors"
+                                className="px-3 py-1 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 border border-emerald-500/40 hover:border-emerald-500/70 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-xs"
                               >
                                 Approve
                               </button>
                               <button
                                 onClick={() => handleReject(booking.id)}
-                                className="px-3 py-1 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-lg text-xs font-semibold transition-colors"
+                                className="px-3 py-1 bg-rose-500/15 text-rose-400 hover:bg-rose-500/25 border border-rose-500/40 hover:border-rose-500/70 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-xs"
                               >
                                 Reject
                               </button>

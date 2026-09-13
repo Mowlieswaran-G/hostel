@@ -1,9 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Navbar from "../../components/Navbar";
 import Skeleton from "../../components/Skeleton";
 import DashboardGreeting from "../../components/DashboardGreeting";
-import { db } from "../../firebase/config";
-import { collection, getDocs } from "firebase/firestore";
+import { useData } from "../../context/DataContext";
 import { RiBuilding2Line } from "react-icons/ri";
 
 // Aggregate complaints per room from maintenanceRequests
@@ -55,33 +54,10 @@ const SEVERITY_TEXT = {
 };
 
 export default function HeatmapPage() {
-  const [rooms, setRooms] = useState([]);
-  const [complaints, setComplaints] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { rooms, maintenanceRequests: complaints, ready } = useData();
+  const loading = !ready;
   const [selectedFloor, setSelectedFloor] = useState("all");
   const [selectedRoom, setSelectedRoom] = useState(null);
-
-  useEffect(() => {
-    const fetchAll = async () => {
-      try {
-        const [roomSnap, cmpSnap] = await Promise.all([
-          getDocs(collection(db, "rooms")),
-          getDocs(collection(db, "maintenanceRequests")),
-        ]);
-        const roomData = roomSnap.docs
-          .map((d) => ({ id: d.id, ...d.data() }))
-          .sort((a, b) => a.roomNumber.localeCompare(b.roomNumber));
-        const cmpData = cmpSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        setRooms(roomData);
-        setComplaints(cmpData);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchAll();
-  }, []);
 
   const heatmap = buildHeatmap(rooms, complaints);
   const floors = [...new Set(rooms.map((r) => r.floor))].sort();
@@ -107,64 +83,64 @@ export default function HeatmapPage() {
       <main className="page-content">
         <DashboardGreeting subtitle="Visual heatmap of room complaints and maintenance issues" />
 
-        {/* Legend */}
-        <div className="flex items-center gap-6 mb-6">
-          {Object.entries(SEVERITY_CONFIG).map(([key, cfg]) => (
-            <span
-              key={key}
-              className="flex items-center gap-2 text-xs text-[color:var(--text-secondary)]"
-            >
-              <span
-                className="w-4 h-4 rounded"
-                style={{
-                  background: cfg.color,
-                  border: `1px solid ${cfg.border}`,
-                }}
-              />
-              {cfg.label}
+        {/* Unified Control & Filter Bar */}
+        <div className="glass rounded-2xl p-5 mb-8 flex flex-col md:flex-row md:items-center justify-between gap-5 border border-[color:var(--glass-border)] shadow-sm">
+          {/* Legend */}
+          <div className="flex flex-wrap items-center gap-4">
+            <span className="text-xs font-bold uppercase tracking-wider text-[color:var(--text-muted)]">
+              Status:
             </span>
-          ))}
-        </div>
+            {Object.entries(SEVERITY_CONFIG).map(([key, cfg]) => (
+              <span
+                key={key}
+                className="flex items-center gap-2 text-xs font-medium text-[color:var(--text-secondary)]"
+              >
+                <span
+                  className="w-3.5 h-3.5 rounded-md shrink-0 shadow-xs"
+                  style={{
+                    background: cfg.color,
+                    border: `1.5px solid ${cfg.border}`,
+                  }}
+                />
+                {cfg.label}
+              </span>
+            ))}
+          </div>
 
-        {/* Floor Filter */}
-        <div className="flex items-center gap-2 mb-6">
-          <button
-            onClick={() => setSelectedFloor("all")}
-            className="px-4 py-1.5 rounded-lg text-xs font-semibold transition-all"
-            style={{
-              background:
-                selectedFloor === "all"
-                  ? "rgba(105,71,255,0.25)"
-                  : "var(--glass-bg)",
-              color: selectedFloor === "all" ? "#a590ff" : "var(--text-muted)",
-              border: `1px solid ${selectedFloor === "all" ? "rgba(105,71,255,0.4)" : "var(--border-subtle)"}`,
-            }}
-          >
-            All Floors
-          </button>
-          {floors.map((f) => (
+          {/* Floor Filter */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-[color:var(--text-muted)] mr-1">
+              Floor:
+            </span>
             <button
-              key={f}
-              onClick={() => setSelectedFloor(String(f))}
-              className="px-4 py-1.5 rounded-lg text-xs font-semibold transition-all"
-              style={{
-                background:
-                  selectedFloor === String(f)
-                    ? "rgba(105,71,255,0.25)"
-                    : "var(--glass-bg)",
-                color:
-                  selectedFloor === String(f) ? "#a590ff" : "var(--text-muted)",
-                border: `1px solid ${selectedFloor === String(f) ? "rgba(105,71,255,0.4)" : "var(--border-subtle)"}`,
-              }}
+              onClick={() => setSelectedFloor("all")}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                selectedFloor === "all"
+                  ? "bg-indigo-600 text-white shadow-sm font-bold"
+                  : "bg-[color:var(--segment-bg)] text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]"
+              }`}
             >
-              Floor {f}
+              All Floors
             </button>
-          ))}
+            {floors.map((f) => (
+              <button
+                key={f}
+                onClick={() => setSelectedFloor(String(f))}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  selectedFloor === String(f)
+                    ? "bg-indigo-600 text-white shadow-sm font-bold"
+                    : "bg-[color:var(--segment-bg)] text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]"
+                }`}
+              >
+                Floor {f}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className="flex gap-6">
-          {/* Heatmap Grid */}
-          <div className="flex-1 space-y-6">
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Heatmap Grid — explicit vertical gap */}
+          <div className="flex-1 flex flex-col gap-8">
             {loading ? (
               <Skeleton rows={8} />
             ) : (
@@ -173,61 +149,73 @@ export default function HeatmapPage() {
                   (f) => selectedFloor === "all" || String(f) === selectedFloor,
                 )
                 .map((f) => (
-                  <div key={f} className="glass rounded-2xl p-5">
-                    <div className="flex items-center gap-2 mb-4">
-                      <RiBuilding2Line size={16} style={{ color: "#a590ff" }} />
-                      <h3 className="font-semibold text-[color:var(--text-primary)]">
-                        Floor {f} — Block {f === 1 ? "A" : f === 2 ? "B" : "C"}
-                      </h3>
-                      <span className="ml-auto text-xs text-[color:var(--text-muted)]">
+                  <div
+                    key={f}
+                    className="glass rounded-2xl overflow-hidden border border-[color:var(--glass-border)] shadow-sm"
+                  >
+                    {/* Dedicated Card Header Bar */}
+                    <div className="px-6 py-4 bg-[color:var(--bg-surface-2)] border-b border-[color:var(--border-subtle)] flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-indigo-500/15 text-indigo-400 flex items-center justify-center shrink-0">
+                          <RiBuilding2Line size={18} />
+                        </div>
+                        <h2 className="font-bold text-base text-[color:var(--text-primary)]">
+                          Floor {f} — Block {f === 1 ? "A" : f === 2 ? "B" : "C"}
+                        </h2>
+                      </div>
+                      <span className="text-xs font-medium px-3 py-1 rounded-full bg-[color:var(--bg-surface-3)] text-[color:var(--text-secondary)]">
                         {byFloor[f]?.filter((r) => r.complaintCount > 0).length}{" "}
                         rooms with issues
                       </span>
                     </div>
-                    <div className="grid grid-cols-5 gap-3">
-                      {(byFloor[f] || []).map((room) => (
-                        <button
-                          key={room.id}
-                          onClick={() =>
-                            setSelectedRoom(
-                              selectedRoom?.id === room.id ? null : room,
-                            )
-                          }
-                          className="rounded-xl p-3 text-center transition-all hover:scale-105 cursor-pointer"
-                          style={{
-                            background: SEVERITY_CONFIG[room.severity].color,
-                            border: `1.5px solid ${
-                              selectedRoom?.id === room.id
-                                ? "#a590ff"
-                                : SEVERITY_CONFIG[room.severity].border
-                            }`,
-                            outline:
-                              selectedRoom?.id === room.id
-                                ? "2px solid rgba(165,144,255,0.5)"
-                                : "none",
-                          }}
-                        >
-                          <p
-                            className="text-sm font-bold"
-                            style={{ color: SEVERITY_TEXT[room.severity] }}
-                          >
-                            {room.roomNumber}
-                          </p>
-                          <p
-                            className="text-xs mt-0.5"
+
+                    {/* Dedicated Card Body Grid */}
+                    <div className="p-6">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                        {(byFloor[f] || []).map((room) => (
+                          <button
+                            key={room.id}
+                            onClick={() =>
+                              setSelectedRoom(
+                                selectedRoom?.id === room.id ? null : room,
+                              )
+                            }
+                            className="rounded-xl p-4 text-center transition-all hover:scale-[1.02] cursor-pointer flex flex-col items-center justify-center"
                             style={{
-                              color: SEVERITY_TEXT[room.severity],
-                              opacity: 0.8,
+                              background: SEVERITY_CONFIG[room.severity].color,
+                              border: `1.5px solid ${
+                                selectedRoom?.id === room.id
+                                  ? "#a590ff"
+                                  : SEVERITY_CONFIG[room.severity].border
+                              }`,
+                              boxShadow:
+                                selectedRoom?.id === room.id
+                                  ? "0 0 0 3px rgba(165,144,255,0.4)"
+                                  : "none",
                             }}
                           >
-                            {room.complaintCount} issue
-                            {room.complaintCount !== 1 ? "s" : ""}
-                          </p>
-                          <p className="text-xs mt-0.5 text-[color:var(--text-muted)]">
-                            {room.occupiedBeds}/{room.capacity} beds
-                          </p>
-                        </button>
-                      ))}
+                            <p
+                              className="text-base font-black tracking-wide"
+                              style={{ color: SEVERITY_TEXT[room.severity] }}
+                            >
+                              {room.roomNumber}
+                            </p>
+                            <p
+                              className="text-xs font-semibold mt-1"
+                              style={{
+                                color: SEVERITY_TEXT[room.severity],
+                                opacity: 0.9,
+                              }}
+                            >
+                              {room.complaintCount} issue
+                              {room.complaintCount !== 1 ? "s" : ""}
+                            </p>
+                            <p className="text-[11px] text-[color:var(--text-muted)] font-medium mt-1">
+                              {room.occupiedBeds}/{room.capacity} beds
+                            </p>
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 ))
@@ -237,20 +225,21 @@ export default function HeatmapPage() {
           {/* Detail Panel */}
           {selectedRoom && (
             <div className="w-80 shrink-0">
-              <div className="glass rounded-2xl p-5 sticky top-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold text-[color:var(--text-primary)]">
+              <div className="glass rounded-2xl overflow-hidden border border-[color:var(--glass-border)] sticky top-6 shadow-sm">
+                <div className="px-5 py-4 bg-[color:var(--bg-surface-2)] border-b border-[color:var(--border-subtle)] flex items-center justify-between">
+                  <h3 className="font-bold text-base text-[color:var(--text-primary)]">
                     Room {selectedRoom.roomNumber}
                   </h3>
                   <button
                     onClick={() => setSelectedRoom(null)}
-                    className="text-xs text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)]"
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-xs text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-surface-3)] transition-colors cursor-pointer"
                   >
                     ✕
                   </button>
                 </div>
 
-                {/* Room Details */}
+                <div className="p-5">
+                  {/* Room Details */}
                 <div className="space-y-2 mb-5">
                   {[
                     ["Floor", `Floor ${selectedRoom.floor}`],
@@ -334,7 +323,8 @@ export default function HeatmapPage() {
                 </div>
               </div>
             </div>
-          )}
+          </div>
+        )}
         </div>
       </main>
     </div>

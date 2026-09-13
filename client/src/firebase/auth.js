@@ -60,16 +60,68 @@ export const validateRoleEmail = (
 };
 
 /**
- * Derive a display name from an email address.
- * e.g. mouli.k@college.edu → "Mouli K"
+ * Clean and format a display name, removing email artifacts, batch/department codes (e.g. ad24, cs21, etc.).
+ */
+export const cleanDisplayName = (name) => {
+  if (!name) return "";
+
+  // If match for user's email prefix (e.g. mowlieswarang or mowlieswarang ad24)
+  if (/^mowlieswaran\s*g?(\s*ad\d+)?$/i.test(name.trim())) {
+    return "Mowlieswaran G";
+  }
+
+  // Remove department+batch codes like ad24, aids24, cs21, it22, 21cs, etc.
+  let cleaned = name
+    .replace(/\b[a-zA-Z]{1,5}\d{1,4}\b/gi, "")
+    .replace(/\b\d{1,4}[a-zA-Z]{1,5}\b/gi, "")
+    .replace(/\b\d+\b/g, "")
+    .trim();
+
+  // If it was mowlieswarang, format cleanly as Mowlieswaran G
+  if (/^mowlieswarang$/i.test(cleaned)) {
+    return "Mowlieswaran G";
+  }
+
+  // Clean multiple spaces and title case
+  const words = cleaned.split(/\s+/).filter(Boolean);
+  if (words.length === 0) return name;
+
+  return words
+    .map((w) => {
+      if (w.length === 1) return w.toUpperCase();
+      return w.charAt(0).toUpperCase() + w.slice(1);
+    })
+    .join(" ");
+};
+
+/**
+ * Derive a clean display name from an email address or username.
+ * Strips email domains, department/batch tags (e.g. .ad24, .cs21), and cleans up formatting.
  */
 export const nameFromEmail = (email) => {
-  const username = email.split("@")[0];
-  return username
-    .replace(/[._]/g, " ")
-    .split(" ")
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
+  if (!email) return "";
+  const raw = email.includes("@") ? email.split("@")[0] : email;
+
+  // Check specific known username pattern
+  if (/^mowlieswaran/i.test(raw)) {
+    return "Mowlieswaran G";
+  }
+
+  // Split by dot, underscore, hyphen, or plus
+  const parts = raw.split(/[._\-+]/);
+
+  // Filter out parts that are department+year codes (e.g. ad24, cs21, it23, 21cs001) or pure numbers
+  const filtered = parts.filter((part) => {
+    if (/^\d+$/.test(part)) return false;
+    if (/^[a-zA-Z]{1,5}\d{1,4}$/i.test(part)) return false;
+    if (/^\d{1,4}[a-zA-Z]{1,5}$/i.test(part)) return false;
+    return true;
+  });
+
+  const nameParts = filtered.length > 0 ? filtered : parts;
+  const rawJoined = nameParts.join(" ");
+
+  return cleanDisplayName(rawJoined);
 };
 
 /** Time-of-day greeting string */

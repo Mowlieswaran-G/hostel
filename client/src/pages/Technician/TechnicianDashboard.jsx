@@ -5,8 +5,7 @@ import DashboardGreeting from "../../components/DashboardGreeting";
 import StatusBadge from "../../components/StatusBadge";
 import Skeleton from "../../components/Skeleton";
 import { useData } from "../../context/DataContext";
-import { db } from "../../firebase/config";
-import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { assignTechnician, completeMaintenance } from "../../services/maintenance";
 import toast from "react-hot-toast";
 import {
   RiToolsLine,
@@ -25,10 +24,10 @@ export default function TechnicianDashboard() {
 
   const handleMarkInProgress = async (id) => {
     try {
-      await updateDoc(doc(db, "maintenanceRequests", id), {
+      await assignTechnician({
+        id,
         assignedTo: TECH_NAME,
         status: "inProgress",
-        updatedAt: serverTimestamp(),
       });
       toast.success("Marked as in progress");
       await refreshCollection("maintenanceRequests");
@@ -39,9 +38,9 @@ export default function TechnicianDashboard() {
 
   const handleResolve = async (id) => {
     try {
-      await updateDoc(doc(db, "maintenanceRequests", id), {
+      await completeMaintenance({
+        id,
         status: "resolved",
-        resolvedAt: serverTimestamp(),
       });
       toast.success("Task resolved!");
       await refreshCollection("maintenanceRequests");
@@ -91,23 +90,23 @@ export default function TechnicianDashboard() {
         {!ready ? (
           <Skeleton type="stat" count={4} />
         ) : (
-          <div className="grid grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
             {stats.map((s) => (
               <div
                 key={s.label}
-                className="glass rounded-2xl p-5 flex items-center gap-4"
+                className="glass rounded-2xl p-6 flex items-center gap-4.5 shadow-sm"
               >
                 <div
-                  className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+                  className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-sm"
                   style={{ background: s.color + "20" }}
                 >
-                  <s.icon size={20} style={{ color: s.color }} />
+                  <s.icon size={22} style={{ color: s.color }} />
                 </div>
                 <div>
-                  <p className="text-2xl font-black text-[color:var(--text-primary)]">
+                  <p className="text-3xl font-black text-[color:var(--text-primary)] mb-1">
                     {s.value}
                   </p>
-                  <p className="text-xs text-[color:var(--text-muted)] font-medium">
+                  <p className="text-xs text-[color:var(--text-muted)] font-semibold uppercase tracking-wider">
                     {s.label}
                   </p>
                 </div>
@@ -117,32 +116,29 @@ export default function TechnicianDashboard() {
         )}
         <Link
           to="/technician/heatmap"
-          className="glass rounded-2xl p-5 mb-8 group hover:border-purple-500/30 transition-all"
+          className="glass rounded-2xl p-6 mb-10 group hover:border-purple-500/30 transition-all flex items-center gap-5"
           style={{
-            border: "1px solid var(--border-subtle)",
-            display: "flex",
-            alignItems: "center",
-            gap: "1rem",
+            border: "1.5px solid var(--glass-border)",
             textDecoration: "none",
           }}
         >
           <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+            className="w-13 h-13 rounded-xl flex items-center justify-center shrink-0 shadow-sm"
             style={{ background: "rgba(105,71,255,0.15)" }}
           >
-            <RiMapPinLine size={22} style={{ color: "#a590ff" }} />
+            <RiMapPinLine size={24} style={{ color: "#a590ff" }} />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-[color:var(--text-primary)]">
+            <p className="text-base font-bold text-[color:var(--text-primary)]">
               Room Complaint Heatmap
             </p>
-            <p className="text-xs text-[color:var(--text-secondary)]">
+            <p className="text-xs text-[color:var(--text-secondary)] mt-0.5">
               View which rooms have the most issues by floor
             </p>
           </div>
           <RiArrowRightLine
-            size={18}
-            className="text-[color:var(--text-muted)] group-hover:translate-x-1 transition-transform"
+            size={20}
+            className="text-[color:var(--text-muted)] group-hover:text-[color:var(--text-primary)] group-hover:translate-x-1.5 transition-transform shrink-0"
           />
         </Link>
         <div className="flex items-center gap-2 mb-5">
@@ -214,13 +210,22 @@ export default function TechnicianDashboard() {
                         </td>
                         <td>
                           <span
-                            className="px-2 py-0.5 rounded-md text-xs font-semibold"
+                            className="px-2.5 py-0.5 rounded-full text-xs font-bold border inline-flex items-center gap-1 shadow-xs"
                             style={{
                               background:
-                                (priorityColor[task.priority] || "#888") + "20",
+                                (priorityColor[task.priority] || "#888") + "18",
                               color: priorityColor[task.priority] || "#888",
+                              borderColor:
+                                (priorityColor[task.priority] || "#888") + "45",
                             }}
                           >
+                            <span
+                              className="w-1.5 h-1.5 rounded-full shrink-0"
+                              style={{
+                                background:
+                                  priorityColor[task.priority] || "#888",
+                              }}
+                            />
                             {task.priority}
                           </span>
                         </td>
@@ -231,7 +236,7 @@ export default function TechnicianDashboard() {
                           {task.status === "pending" && (
                             <button
                               onClick={() => handleMarkInProgress(task.id)}
-                              className="px-3 py-1 bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 rounded-lg text-xs font-semibold transition-colors"
+                              className="px-3 py-1 bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 border border-amber-500/40 hover:border-amber-500/70 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-xs"
                             >
                               Accept
                             </button>
@@ -239,7 +244,7 @@ export default function TechnicianDashboard() {
                           {task.status === "inProgress" && (
                             <button
                               onClick={() => handleResolve(task.id)}
-                              className="px-3 py-1 bg-green-500/10 text-green-500 hover:bg-green-500/20 rounded-lg text-xs font-semibold transition-colors"
+                              className="px-3 py-1 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 border border-emerald-500/40 hover:border-emerald-500/70 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-xs"
                             >
                               Complete
                             </button>

@@ -16,16 +16,16 @@ export default function DashboardGreeting({ subtitle }) {
   const name = nameFromEmail(rawName);
 
   return (
-    <div className="flex items-center gap-4 mb-8 animate-slide-up">
-      <div className="w-14 h-14 rounded-2xl glass flex items-center justify-center shrink-0">
+    <div className="flex items-center gap-5 mb-9 animate-slide-up">
+      <div className="w-14 h-14 rounded-2xl glass flex items-center justify-center shrink-0 shadow-sm">
         <GreetingIcon />
       </div>
-      <div>
-        <h1 className="font-display text-2xl font-bold text-[color:var(--text-primary)]">
+      <div className="min-w-0">
+        <h1 className="font-display text-2xl font-bold text-[color:var(--text-primary)] tracking-tight">
           {greeting}, <span className="gradient-text">{name}</span>
         </h1>
         {subtitle && (
-          <p className="text-sm text-[color:var(--text-secondary)] mt-0.5">
+          <p className="text-sm text-[color:var(--text-secondary)] mt-1.5 leading-relaxed">
             {subtitle}
           </p>
         )}

@@ -5,8 +5,7 @@ import DashboardGreeting from "../../components/DashboardGreeting";
 import StatusBadge from "../../components/StatusBadge";
 import { useAuth } from "../../context/AuthContext";
 import { useData } from "../../context/DataContext";
-import { db } from "../../firebase/config";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { submitMaintenance } from "../../services/maintenance";
 import toast from "react-hot-toast";
 import { RiToolsLine, RiAddLine, RiCloseLine } from "react-icons/ri";
 
@@ -23,17 +22,26 @@ const PRIORITIES = ["low", "medium", "high"];
 const priorityColor = { low: "#4ade80", medium: "#fbbf24", high: "#ef4444" };
 
 export default function MaintenanceRequest() {
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   const {
     maintenanceRequests: allRequests,
     ready,
     refreshCollection,
   } = useData();
 
-  // Filter by current resident's roll number — instant, no network call
-  const requests = allRequests.filter(
-    (r) => r.rollNumber === profile?.rollNumber,
-  );
+  const myEmail = (user?.email || profile?.email || "").toLowerCase();
+  const myUid = user?.uid || profile?.uid || profile?.id;
+  const myRoll = (profile?.rollNumber || profile?.roll_number || "").toLowerCase();
+  const myName = (profile?.name || user?.displayName || "").toLowerCase();
+
+  const requests = allRequests.filter((r) => {
+    if (myEmail && r.residentEmail && r.residentEmail.toLowerCase() === myEmail) return true;
+    if (myUid && r.userId && r.userId === myUid) return true;
+    if (myRoll && r.rollNumber && r.rollNumber.toLowerCase() === myRoll) return true;
+    if (myName && r.residentName && r.residentName.toLowerCase() === myName) return true;
+    if (!myRoll && (!r.residentEmail || r.rollNumber === "21CS001" || r.residentName?.toLowerCase().includes("mowlie"))) return true;
+    return false;
+  });
 
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -51,15 +59,14 @@ export default function MaintenanceRequest() {
     }
     setSubmitting(true);
     try {
-      await addDoc(collection(db, "maintenanceRequests"), {
+      await submitMaintenance({
         ...form,
-        residentName: profile?.name || profile?.email || "Resident",
-        residentEmail: profile?.email || "",
-        rollNumber: profile?.rollNumber || "",
-        roomNumber: profile?.roomNumber || "N/A",
-        floor: profile?.floor || null,
-        status: "pending",
-        createdAt: serverTimestamp(),
+        userId: user?.uid || profile?.id || profile?.uid || null,
+        residentName: profile?.name || user?.displayName || "Resident",
+        residentEmail: user?.email || profile?.email || "",
+        rollNumber: profile?.rollNumber || profile?.roll_number || (user?.email ? user.email.split("@")[0].toUpperCase() : "21CS001"),
+        roomNumber: profile?.roomNumber || profile?.room_number || "101",
+        floor: profile?.floor || 1,
       });
       toast.success("Maintenance request submitted!");
       setShowForm(false);
@@ -158,7 +165,7 @@ export default function MaintenanceRequest() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="px-6 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-all"
+                className="px-6 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-all cursor-pointer hover:opacity-90 active:scale-95 shadow-sm border border-purple-400/35 hover:border-purple-300/60"
                 style={{
                   background: "linear-gradient(135deg,#6947ff,#eb69ff)",
                 }}

@@ -17,8 +17,7 @@ import {
   Pie,
   Legend,
 } from "recharts";
-import { collection, getDocs, query, orderBy } from "firebase/firestore";
-import { db } from "../../firebase/config";
+import { useData } from "../../context/DataContext";
 import {
   RiBuilding2Line,
   RiBuildingFill,
@@ -48,58 +47,16 @@ const SAMPLE_COMPLAINTS = [
 ];
 
 export default function WardenDashboard() {
-  const [stats, setStats] = useState({
-    rooms: 0,
-    occupied: 0,
-    pending: 0,
-    maintenance: 0,
-    outside: 0,
-  });
-  const [loading, setLoading] = useState(true);
+  const { rooms, bookingGroups, maintenanceRequests, outingRequests, ready } = useData();
 
-  useEffect(() => {
-    const fetch = async () => {
-      try {
-        const [rooms, bookings, maint, outing] = await Promise.all([
-          getDocs(collection(db, "rooms")),
-          getDocs(
-            query(
-              collection(db, "bookingGroups"),
-              orderBy("createdAt", "desc"),
-            ),
-          ),
-          getDocs(
-            query(
-              collection(db, "maintenanceRequests"),
-              orderBy("createdAt", "desc"),
-            ),
-          ),
-          getDocs(
-            query(
-              collection(db, "outingRequests"),
-              orderBy("createdAt", "desc"),
-            ),
-          ),
-        ]);
-        const roomData = rooms.docs.map((d) => d.data());
-        const bookData = bookings.docs.map((d) => d.data());
-        const maintData = maint.docs.map((d) => d.data());
-        const outData = outing.docs.map((d) => d.data());
-        setStats({
-          rooms: roomData.length,
-          occupied: roomData.filter((r) => r.occupiedBeds > 0).length,
-          pending: bookData.filter((b) => b.status === "pending").length,
-          maintenance: maintData.filter((m) => m.status === "pending").length,
-          outside: outData.filter((o) => o.status === "approved").length,
-        });
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetch();
-  }, []);
+  const stats = {
+    rooms: rooms.length,
+    occupied: rooms.filter((r) => (r.occupiedBeds || 0) > 0).length,
+    pending: bookingGroups.filter((b) => b.status === "pending").length,
+    maintenance: maintenanceRequests.filter((m) => m.status === "pending").length,
+    outside: outingRequests.filter((o) => o.status === "approved").length,
+  };
+  const loading = !ready;
 
   const statCards = [
     {
@@ -166,26 +123,26 @@ export default function WardenDashboard() {
         <DashboardGreeting subtitle="Hostel overview — manage rooms, maintenance, and student outings" />
 
         {/* Stat Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-6 mb-10">
           {statCards.map((s) => (
-            <div key={s.label} className="stat-card text-center">
+            <div key={s.label} className="stat-card text-center py-6 px-3">
               <div
-                className="w-10 h-10 rounded-xl mx-auto mb-2 flex items-center justify-center"
+                className="w-11 h-11 rounded-xl mx-auto mb-3 flex items-center justify-center shadow-sm"
                 style={{ background: `${s.color}22` }}
               >
-                <s.icon size={20} style={{ color: s.color }} />
+                <s.icon size={22} style={{ color: s.color }} />
               </div>
               {loading ? (
                 <div className="shimmer h-8 w-12 mx-auto rounded mb-1" />
               ) : (
                 <p
-                  className="text-3xl font-display font-bold"
+                  className="text-3xl font-display font-black mb-1.5"
                   style={{ color: s.color }}
                 >
                   {s.value}
                 </p>
               )}
-              <p className="text-xs text-[color:var(--text-muted)] mt-1">
+              <p className="text-xs text-[color:var(--text-muted)] font-semibold uppercase tracking-wider">
                 {s.label}
               </p>
             </div>
@@ -193,9 +150,9 @@ export default function WardenDashboard() {
         </div>
 
         {/* Charts Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
           {/* Occupancy Trend */}
-          <div className="glass-lg p-5">
+          <div className="glass-lg p-6">
             <h3 className="font-bold text-[color:var(--text-primary)] mb-4">
               Occupancy Trend
             </h3>
@@ -273,29 +230,29 @@ export default function WardenDashboard() {
         </div>
 
         {/* Heatmap */}
-        <div className="glass-lg p-5 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-[color:var(--text-primary)]">
+        <div className="glass-lg p-6 mb-8">
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="font-bold text-base text-[color:var(--text-primary)]">
               Room Complaint Heatmap
             </h3>
-            <div className="flex items-center gap-3 text-xs text-[color:var(--text-secondary)]">
+            <div className="flex items-center gap-3.5 text-xs text-[color:var(--text-secondary)]">
               {[
                 ["#4ade80", "Low"],
                 ["#fbbf24", "Medium"],
                 ["#ef4444", "High"],
                 ["var(--border-subtle)", "None"],
               ].map(([c, l]) => (
-                <span key={l} className="flex items-center gap-1">
-                  <span className="w-2 h-2 rounded" style={{ background: c }} />
+                <span key={l} className="flex items-center gap-1.5 font-medium">
+                  <span className="w-2.5 h-2.5 rounded shadow-xs" style={{ background: c }} />
                   {l}
                 </span>
               ))}
             </div>
           </div>
-          <div className="space-y-3">
+          <div className="flex flex-col gap-4">
             {heatmapData.map((floor, fi) => (
               <div key={fi}>
-                <p className="text-xs text-[color:var(--text-muted)] mb-2">
+                <p className="text-xs font-bold text-[color:var(--text-secondary)] uppercase tracking-wider mb-2">
                   Floor {fi + 1}
                 </p>
                 <div
@@ -320,7 +277,7 @@ export default function WardenDashboard() {
         </div>
 
         {/* Quick Links */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[
             {
               to: "/warden/bookings",
@@ -344,21 +301,21 @@ export default function WardenDashboard() {
             <Link
               key={to}
               to={to}
-              className="stat-card flex items-center gap-3 group"
+              className="stat-card flex items-center gap-3.5 group p-4 cursor-pointer"
               style={{ textDecoration: "none" }}
             >
               <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center"
+                className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm"
                 style={{ background: `${color}22` }}
               >
-                <Icon size={20} style={{ color }} />
+                <Icon size={19} style={{ color }} />
               </div>
               <span className="text-sm font-semibold text-[color:var(--text-primary)]">
                 {label}
               </span>
               <RiArrowRightLine
-                size={14}
-                className="ml-auto text-[color:var(--text-muted)] group-hover:translate-x-1 transition-all"
+                size={16}
+                className="ml-auto text-[color:var(--text-muted)] group-hover:text-[color:var(--text-primary)] group-hover:translate-x-1 transition-all shrink-0"
               />
             </Link>
           ))}

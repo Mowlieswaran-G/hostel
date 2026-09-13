@@ -20,6 +20,7 @@ const MaintenanceRequest = lazy(
 );
 const OutingRequest = lazy(() => import("./pages/Resident/OutingRequest"));
 const WardenDashboard = lazy(() => import("./pages/Warden/WardenDashboard"));
+const RoomManagement = lazy(() => import("./pages/Warden/RoomManagement"));
 const BookingApproval = lazy(() => import("./pages/Warden/BookingApproval"));
 const MaintenanceMgmt = lazy(() => import("./pages/Warden/MaintenanceMgmt"));
 const OutingApproval = lazy(() => import("./pages/Warden/OutingApproval"));
@@ -111,6 +112,14 @@ export default function App() {
                   element={
                     <ProtectedRoute allowedRoles={["warden"]}>
                       <WardenDashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/warden/rooms"
+                  element={
+                    <ProtectedRoute allowedRoles={["warden"]}>
+                      <RoomManagement />
                     </ProtectedRoute>
                   }
                 />

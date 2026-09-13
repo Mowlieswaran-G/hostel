@@ -4,8 +4,7 @@ import DashboardGreeting from "../../components/DashboardGreeting";
 import StatusBadge from "../../components/StatusBadge";
 import Skeleton from "../../components/Skeleton";
 import { useData } from "../../context/DataContext";
-import { db } from "../../firebase/config";
-import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { assignTechnician, completeMaintenance } from "../../services/maintenance";
 import toast from "react-hot-toast";
 import { RiToolsLine } from "react-icons/ri";
 
@@ -24,10 +23,10 @@ export default function MaintenanceMgmt() {
   const handleAssign = async (id, techName) => {
     setAssigningId(id);
     try {
-      await updateDoc(doc(db, "maintenanceRequests", id), {
+      await assignTechnician({
+        id,
         assignedTo: techName,
         status: "inProgress",
-        updatedAt: serverTimestamp(),
       });
       toast.success("Assigned to " + techName);
       await refreshCollection("maintenanceRequests");
@@ -40,9 +39,9 @@ export default function MaintenanceMgmt() {
 
   const handleResolve = async (id) => {
     try {
-      await updateDoc(doc(db, "maintenanceRequests", id), {
+      await completeMaintenance({
+        id,
         status: "resolved",
-        resolvedAt: serverTimestamp(),
       });
       toast.success("Marked as resolved!");
       await refreshCollection("maintenanceRequests");
@@ -150,11 +149,12 @@ export default function MaintenanceMgmt() {
                           {r.status !== "resolved" && (
                             <div className="flex items-center gap-1 flex-wrap">
                               <select
-                                className="text-xs px-2 py-1 rounded-lg"
+                                className="text-xs px-2.5 py-1 rounded-lg cursor-pointer outline-none transition-colors"
                                 style={{
                                   background: "var(--input-bg)",
                                   border: "1px solid var(--input-border)",
                                   color: "var(--text-primary)",
+                                  colorScheme: "inherit",
                                 }}
                                 defaultValue=""
                                 onChange={(e) => {
@@ -163,11 +163,25 @@ export default function MaintenanceMgmt() {
                                 }}
                                 disabled={assigningId === r.id}
                               >
-                                <option value="" disabled>
+                                <option
+                                  value=""
+                                  disabled
+                                  style={{
+                                    background: "var(--select-option-bg)",
+                                    color: "var(--text-muted)",
+                                  }}
+                                >
                                   Assign...
                                 </option>
                                 {TECHNICIANS.map((t) => (
-                                  <option key={t} value={t}>
+                                  <option
+                                    key={t}
+                                    value={t}
+                                    style={{
+                                      background: "var(--select-option-bg)",
+                                      color: "var(--text-primary)",
+                                    }}
+                                  >
                                     {t}
                                   </option>
                                 ))}
@@ -175,7 +189,7 @@ export default function MaintenanceMgmt() {
                               {r.status === "inProgress" && (
                                 <button
                                   onClick={() => handleResolve(r.id)}
-                                  className="px-2 py-1 bg-green-500/10 text-green-500 hover:bg-green-500/20 rounded-lg text-xs font-semibold transition-colors"
+                                  className="px-2.5 py-1 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 border border-emerald-500/40 hover:border-emerald-500/70 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-xs"
                                 >
                                   Resolve
                                 </button>

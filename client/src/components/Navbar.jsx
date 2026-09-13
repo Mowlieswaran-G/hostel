@@ -29,6 +29,7 @@ const roleNavItems = {
   ],
   warden: [
     { label: "Dashboard", to: "/warden", icon: RiDashboardLine },
+    { label: "Manage Rooms", to: "/warden/rooms", icon: RiBuilding2Line },
     { label: "Bookings", to: "/warden/bookings", icon: RiCheckboxMultipleLine },
     { label: "Maintenance", to: "/warden/maintenance", icon: RiWrenchLine },
     { label: "Outings", to: "/warden/outings", icon: RiMapPinLine },
@@ -69,12 +70,16 @@ export default function Navbar() {
         {/* Logo Section — spacious top padding & bottom margin */}
         <div className="flex items-center gap-3.5 px-2 mb-8">
           <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-[color:var(--text-primary)] font-black text-xl shadow-md shrink-0"
+            className="w-10 h-10 rounded-xl flex items-center justify-center p-2 shadow-md shrink-0 border border-white/10"
             style={{
               background: `linear-gradient(135deg, ${config.accent}, ${config.accent}aa)`,
             }}
           >
-            S
+            <img
+              src="/hostel-logo.png"
+              alt="SmartHostel"
+              className="w-full h-full object-contain filter brightness-0 invert"
+            />
           </div>
           <div className="min-w-0">
             <p className="font-display font-bold text-[color:var(--text-primary)] text-base leading-tight truncate">

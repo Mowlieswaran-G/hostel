@@ -4,8 +4,7 @@ import DashboardGreeting from "../../components/DashboardGreeting";
 import StatusBadge from "../../components/StatusBadge";
 import Skeleton from "../../components/Skeleton";
 import { useData } from "../../context/DataContext";
-import { db } from "../../firebase/config";
-import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { approveOuting } from "../../services/outing";
 import toast from "react-hot-toast";
 import { RiMapPinLine } from "react-icons/ri";
 
@@ -14,10 +13,7 @@ export default function OutingApproval() {
 
   const handleApprove = async (id) => {
     try {
-      await updateDoc(doc(db, "outingRequests", id), {
-        status: "approved",
-        updatedAt: serverTimestamp(),
-      });
+      await approveOuting({ id, status: "approved" });
       toast.success("Outing approved!");
       await refreshCollection("outingRequests");
     } catch {
@@ -27,11 +23,7 @@ export default function OutingApproval() {
 
   const handleReject = async (id) => {
     try {
-      await updateDoc(doc(db, "outingRequests", id), {
-        status: "rejected",
-        rejectReason: "Request not approved",
-        updatedAt: serverTimestamp(),
-      });
+      await approveOuting({ id, status: "rejected" });
       toast.success("Outing rejected");
       await refreshCollection("outingRequests");
     } catch {
@@ -134,13 +126,13 @@ export default function OutingApproval() {
                             <div className="flex items-center gap-2">
                               <button
                                 onClick={() => handleApprove(r.id)}
-                                className="px-3 py-1 bg-green-500/10 text-green-500 hover:bg-green-500/20 rounded-lg text-xs font-semibold transition-colors"
+                                className="px-3 py-1 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 border border-emerald-500/40 hover:border-emerald-500/70 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-xs"
                               >
                                 Approve
                               </button>
                               <button
                                 onClick={() => handleReject(r.id)}
-                                className="px-3 py-1 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-lg text-xs font-semibold transition-colors"
+                                className="px-3 py-1 bg-rose-500/15 text-rose-400 hover:bg-rose-500/25 border border-rose-500/40 hover:border-rose-500/70 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-xs"
                               >
                                 Reject
                               </button>

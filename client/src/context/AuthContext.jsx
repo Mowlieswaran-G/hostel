@@ -1,8 +1,8 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
-import { auth, db } from "../firebase/config";
+import { auth } from "../firebase/config";
 import { nameFromEmail } from "../firebase/auth";
+import api from "../services/api";
 
 const AuthContext = createContext(null);
 
@@ -58,37 +58,44 @@ export const AuthProvider = ({ children }) => {
       }
 
       // Firebase user is present — real Google sign-in (resident)
+      const initialName = firebaseUser.displayName || nameFromEmail(firebaseUser.email);
       setUser(firebaseUser);
+      setRole("resident");
+      setProfile((prev) => (prev?.id || prev?.uid ? prev : {
+        uid: firebaseUser.uid,
+        id: firebaseUser.uid,
+        email: firebaseUser.email,
+        name: initialName,
+        role: "resident",
+      }));
+      setLoading(false);
 
+      // Asynchronous background sync with MySQL database (non-blocking)
       try {
-        const userRef = doc(db, "users", firebaseUser.uid);
-        const userSnap = await getDoc(userRef);
+        const res = await api.post("/auth/sync", {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          name: initialName,
+          role: "resident",
+        });
 
-        if (userSnap.exists()) {
-          const data = userSnap.data();
+        if (res.data?.user) {
+          const data = res.data.user;
           const normalizedName = data.name
             ? data.name.includes("@")
               ? nameFromEmail(data.name)
               : data.name
-            : nameFromEmail(data.email);
-          setProfile({ ...data, name: normalizedName });
-          setRole(data.role);
-        } else {
-          const newProfile = {
-            uid: firebaseUser.uid,
-            email: firebaseUser.email,
-            name: firebaseUser.displayName || nameFromEmail(firebaseUser.email),
-            role: "resident",
-            createdAt: serverTimestamp(),
-          };
-          await setDoc(userRef, newProfile);
-          setProfile(newProfile);
-          setRole("resident");
+            : initialName;
+
+          setProfile((prev) => ({
+            ...prev,
+            ...data,
+            name: normalizedName,
+          }));
+          if (data.role) setRole(data.role);
         }
       } catch (err) {
-        console.error("AuthContext error:", err);
-      } finally {
-        setLoading(false);
+        console.warn("AuthContext MySQL background sync warning:", err);
       }
     });
 

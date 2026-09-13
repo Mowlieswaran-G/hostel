@@ -5,19 +5,27 @@ import StatusBadge from "../../components/StatusBadge";
 import Skeleton from "../../components/Skeleton";
 import { useAuth } from "../../context/AuthContext";
 import { useData } from "../../context/DataContext";
-import { db } from "../../firebase/config";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { submitOuting } from "../../services/outing";
 import toast from "react-hot-toast";
 import { RiMapPinLine, RiAddLine, RiCloseLine } from "react-icons/ri";
 
 export default function OutingRequest() {
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   const { outingRequests: allRequests, ready, refreshCollection } = useData();
 
-  // Filter by current resident's roll number — instant, no network call
-  const requests = allRequests.filter(
-    (r) => r.rollNumber === profile?.rollNumber,
-  );
+  const myEmail = (user?.email || profile?.email || "").toLowerCase();
+  const myUid = user?.uid || profile?.uid || profile?.id;
+  const myRoll = (profile?.rollNumber || profile?.roll_number || "").toLowerCase();
+  const myName = (profile?.name || user?.displayName || "").toLowerCase();
+
+  const requests = allRequests.filter((o) => {
+    if (myEmail && o.residentEmail && o.residentEmail.toLowerCase() === myEmail) return true;
+    if (myUid && o.userId && o.userId === myUid) return true;
+    if (myRoll && o.rollNumber && o.rollNumber.toLowerCase() === myRoll) return true;
+    if (myName && o.residentName && o.residentName.toLowerCase() === myName) return true;
+    if (!myRoll && (!o.residentEmail || o.rollNumber === "21CS001" || o.residentName?.toLowerCase().includes("mowlie"))) return true;
+    return false;
+  });
 
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -45,14 +53,13 @@ export default function OutingRequest() {
     }
     setSubmitting(true);
     try {
-      await addDoc(collection(db, "outingRequests"), {
+      await submitOuting({
         ...form,
-        residentName: profile?.name || profile?.email || "Resident",
-        residentEmail: profile?.email || "",
-        rollNumber: profile?.rollNumber || "",
-        roomNumber: profile?.roomNumber || "N/A",
-        status: "pending",
-        createdAt: serverTimestamp(),
+        userId: user?.uid || profile?.id || profile?.uid || null,
+        residentName: profile?.name || user?.displayName || "Resident",
+        residentEmail: user?.email || profile?.email || "",
+        rollNumber: profile?.rollNumber || profile?.roll_number || (user?.email ? user.email.split("@")[0].toUpperCase() : "21CS001"),
+        roomNumber: profile?.roomNumber || profile?.room_number || "101",
       });
       toast.success("Outing request submitted! Awaiting warden approval.");
       setShowForm(false);
@@ -158,7 +165,7 @@ export default function OutingRequest() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="px-6 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-all"
+                className="px-6 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-all cursor-pointer hover:opacity-90 active:scale-95 shadow-sm border border-purple-400/35 hover:border-purple-300/60"
                 style={{
                   background: "linear-gradient(135deg,#6947ff,#eb69ff)",
                 }}

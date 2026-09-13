@@ -1,9 +1,7 @@
 /**
- * DataContext — Global data store that fetches all Firestore collections ONCE
- * at app startup, then serves data from memory to every page.
- *
- * Page switches are instant since they read from state, not the network.
- * Any mutation (create/update) calls refreshCollection() to re-sync.
+ * DataContext — Global data store backed by MySQL Express API.
+ * Fetches collections from MySQL backend at app startup,
+ * then serves data from memory to every page for instant switching.
  */
 import {
   createContext,
@@ -12,10 +10,34 @@ import {
   useState,
   useCallback,
 } from "react";
-import { db } from "../firebase/config";
-import { collection, getDocs, query, orderBy } from "firebase/firestore";
+import api from "../services/api";
 
 const DataContext = createContext(null);
+
+function normalizeDates(item) {
+  if (!item || typeof item !== "object") return item;
+  const copy = { ...item };
+  for (const key of ["createdAt", "updatedAt", "resolvedAt"]) {
+    if (copy[key]) {
+      const d = new Date(copy[key]);
+      copy[key] = {
+        toDate: () => d,
+        toISOString: () => d.toISOString(),
+        toLocaleDateString: (...args) => d.toLocaleDateString(...args),
+        toString: () => d.toString(),
+      };
+    }
+  }
+  return copy;
+}
+
+const ENDPOINTS = {
+  rooms: "/rooms",
+  maintenanceRequests: "/maintenance/all",
+  outingRequests: "/outing/all",
+  bookingGroups: "/bookings",
+  announcements: "/announcements",
+};
 
 export function DataProvider({ children }) {
   const [rooms, setRooms] = useState([]);
@@ -25,21 +47,18 @@ export function DataProvider({ children }) {
   const [announcements, setAnnouncements] = useState([]);
   const [ready, setReady] = useState(false);
 
-  // Fetch a single collection and update state
-  const fetchCollection = useCallback(
-    async (name, setter, orderField = "createdAt") => {
-      try {
-        const q = orderField
-          ? query(collection(db, name), orderBy(orderField, "desc"))
-          : query(collection(db, name));
-        const snap = await getDocs(q);
-        setter(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-      } catch (err) {
-        console.warn(`DataContext: failed to fetch ${name}`, err);
-      }
-    },
-    [],
-  );
+  // Fetch a single collection from MySQL backend
+  const fetchCollection = useCallback(async (name, setter) => {
+    try {
+      const endpoint = ENDPOINTS[name];
+      if (!endpoint) return;
+      const res = await api.get(endpoint);
+      const data = Array.isArray(res.data) ? res.data : [];
+      setter(data.map(normalizeDates));
+    } catch (err) {
+      console.warn(`DataContext: failed to fetch ${name} from MySQL backend`, err);
+    }
+  }, []);
 
   // Re-fetch a specific collection (call after mutations)
   const refreshCollection = useCallback(
@@ -51,24 +70,19 @@ export function DataProvider({ children }) {
         bookingGroups: (d) => setBookingGroups(d),
         announcements: (d) => setAnnouncements(d),
       };
-      const orderField = name === "rooms" ? "roomNumber" : "createdAt";
-      if (map[name]) await fetchCollection(name, map[name], orderField);
+      if (map[name]) await fetchCollection(name, map[name]);
     },
     [fetchCollection],
   );
 
-  // Load all collections in parallel on mount (single burst of network calls)
+  // Load all collections in parallel on mount
   useEffect(() => {
     Promise.all([
-      fetchCollection("rooms", setRooms, "roomNumber"),
-      fetchCollection(
-        "maintenanceRequests",
-        setMaintenanceRequests,
-        "createdAt",
-      ),
-      fetchCollection("outingRequests", setOutingRequests, "createdAt"),
-      fetchCollection("bookingGroups", setBookingGroups, "createdAt"),
-      fetchCollection("announcements", setAnnouncements, "createdAt"),
+      fetchCollection("rooms", setRooms),
+      fetchCollection("maintenanceRequests", setMaintenanceRequests),
+      fetchCollection("outingRequests", setOutingRequests),
+      fetchCollection("bookingGroups", setBookingGroups),
+      fetchCollection("announcements", setAnnouncements),
     ]).finally(() => setReady(true));
   }, [fetchCollection]);
 

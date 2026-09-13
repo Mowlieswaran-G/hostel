@@ -1,8 +1,7 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { doc, updateDoc } from "firebase/firestore";
-import { db } from "../../firebase/config";
+import api from "../../services/api";
 import toast from "react-hot-toast";
 import {
   RiUserLine,
@@ -24,7 +23,7 @@ const YEARS = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
 const HOSTELS = ["Block A", "Block B", "Block C", "Block D", "Block E"];
 
 export default function RegisterPage() {
-  const { user, profile } = useAuth();
+  const { user, profile, setProfile } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({
     name: "",
@@ -56,10 +55,15 @@ export default function RegisterPage() {
     }
     setSaving(true);
     try {
-      await updateDoc(doc(db, "users", user.uid), {
+      const res = await api.post("/auth/sync", {
+        uid: user?.uid,
+        email: user?.email,
         ...form,
-        profileComplete: true,
+        role: "resident",
       });
+      if (setProfile && res.data?.user) {
+        setProfile(res.data.user);
+      }
       toast.success("Profile created!");
       navigate("/resident", { replace: true });
     } catch {
@@ -78,8 +82,14 @@ export default function RegisterPage() {
       }}
     >
       <div className="glass-lg w-full max-w-md p-8 animate-slide-up">
-        <div className="text-center mb-7">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-600 to-purple-800 mx-auto mb-4 flex items-center justify-center">
+        <div className="flex flex-col items-center justify-center text-center mb-7 w-full">
+          <div
+            className="w-14 h-14 rounded-2xl mb-4 flex items-center justify-center shrink-0 shadow-lg"
+            style={{
+              background: "linear-gradient(135deg, #7c3aed, #4c1d95)",
+              margin: "0 auto",
+            }}
+          >
             <RiUserLine size={26} color="white" />
           </div>
           <h1 className="font-display text-2xl font-bold text-[color:var(--text-primary)]">

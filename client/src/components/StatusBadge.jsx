@@ -25,6 +25,12 @@ const STATUS_MAP = {
   },
   completed: { label: "Completed", cls: "badge-completed", icon: RiCheckLine },
   assigned: { label: "Assigned", cls: "badge-inprogress", icon: RiLoader4Line },
+  resolved: { label: "Resolved", cls: "badge-completed", icon: RiCheckLine },
+  available: { label: "Available", cls: "badge-approved", icon: RiCheckboxCircleLine },
+  partial: { label: "Partial", cls: "badge-partial", icon: RiTimeLine },
+  full: { label: "Full", cls: "badge-rejected", icon: RiCloseCircleLine },
+  occupied: { label: "Occupied", cls: "badge-rejected", icon: RiCloseCircleLine },
+  maintenance: { label: "Maintenance", cls: "badge-inprogress", icon: RiLoader4Line },
 };
 
 export default function StatusBadge({ status }) {

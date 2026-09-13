@@ -18,8 +18,8 @@ export default function RoleSelector({ value, onChange }) {
           className={`segment-btn ${value === id ? "active" : ""}`}
           aria-pressed={value === id}
         >
-          <span className="flex items-center justify-center gap-1.5">
-            <Icon size={14} />
+          <span className="flex items-center justify-center gap-1.5 text-xs font-semibold">
+            <Icon size={15} />
             {label}
           </span>
         </button>

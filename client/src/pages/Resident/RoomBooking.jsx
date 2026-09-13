@@ -20,17 +20,23 @@ export default function RoomBooking() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
 
-  const filtered = rooms.filter(
+  // ONLY show rooms that the warden has released as available with vacant beds
+  const availableRooms = rooms.filter((r) => {
+    const vacant = (r.capacity || 4) - (r.occupiedBeds || 0);
+    return r.status === "available" && vacant > 0;
+  });
+
+  const filtered = availableRooms.filter(
     (r) =>
       r.roomNumber?.toString().includes(search) ||
-      r.floor?.toString().includes(search),
+      r.floor?.toString().includes(search) ||
+      r.block?.toLowerCase().includes(search.toLowerCase()),
   );
 
   const getOccupancyColor = (room) => {
-    const pct = room.occupiedBeds / room.capacity;
-    if (pct >= 1) return "#ef4444";
-    if (pct >= 0.5) return "#fbbf24";
-    return "#4ade80";
+    const vacant = (room.capacity || 4) - (room.occupiedBeds || 0);
+    if (vacant === room.capacity) return "#10b981"; // 100% free
+    return "#f59e0b"; // Partial free
   };
 
   const handleCreateGroup = async () => {
@@ -63,28 +69,29 @@ export default function RoomBooking() {
     <div className="page-wrapper">
       <Navbar />
       <main className="page-content">
-        <DashboardGreeting subtitle="Browse available rooms and create a booking group" />
-        <div className="relative mb-6 max-w-sm">
+        <DashboardGreeting subtitle="Browse rooms released and made available by the warden for booking" />
+        <div className="relative mb-6 max-w-md flex items-center">
           <RiSearchLine
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--text-muted)]"
-            size={18}
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[color:var(--text-muted)] pointer-events-none z-10"
+            size={19}
           />
           <input
-            className="input-field pl-10"
+            className="input-field input-with-icon"
+            style={{ paddingLeft: "2.85rem" }}
             placeholder="Search by room or floor..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <div className="flex items-center gap-4 mb-4 text-xs text-[color:var(--text-secondary)]">
+        <div className="flex items-center gap-5 mb-5 text-xs text-[color:var(--text-secondary)] font-medium">
           {[
             ["#4ade80", "Available"],
             ["#fbbf24", "Half Full"],
             ["#ef4444", "Full"],
           ].map(([c, l]) => (
-            <span key={l} className="flex items-center gap-1.5">
+            <span key={l} className="flex items-center gap-2">
               <span
-                className="w-2 h-2 rounded-full"
+                className="w-2.5 h-2.5 rounded-full shadow-xs"
                 style={{ background: c }}
               />
               {l}
@@ -111,7 +118,14 @@ export default function RoomBooking() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((room) => {
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={10} className="text-center py-10 text-[color:var(--text-secondary)] font-medium">
+                      No rooms currently released or available for booking. Only rooms updated and freed by the Warden will appear here.
+                    </td>
+                  </tr>
+                ) : (
+                  filtered.map((room) => {
                   const vacant = room.capacity - room.occupiedBeds;
                   const isFull = vacant <= 0;
                   return (
@@ -147,12 +161,23 @@ export default function RoomBooking() {
                       </td>
                       <td>
                         <span
-                          className="px-2 py-0.5 rounded-full text-xs font-semibold"
-                          style={{
-                            background: getOccupancyColor(room) + "20",
-                            color: getOccupancyColor(room),
-                          }}
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border transition-all ${
+                            isFull
+                              ? "bg-rose-500/15 text-rose-400 border-rose-500/40 shadow-xs"
+                              : vacant === room.capacity
+                                ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/40 shadow-xs"
+                                : "bg-amber-500/15 text-amber-400 border-amber-500/40 shadow-xs"
+                          }`}
                         >
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                              isFull
+                                ? "bg-rose-400"
+                                : vacant === room.capacity
+                                  ? "bg-emerald-400"
+                                  : "bg-amber-400"
+                            }`}
+                          />
                           {isFull
                             ? "Full"
                             : vacant === room.capacity
@@ -167,7 +192,7 @@ export default function RoomBooking() {
                               setSelected(room);
                               setShowModal(true);
                             }}
-                            className="px-3 py-1 rounded-lg text-xs font-semibold text-white transition-all"
+                            className="px-3 py-1 rounded-lg text-xs font-bold text-white transition-all cursor-pointer hover:opacity-90 active:scale-95 shadow-sm border border-purple-400/40 hover:border-purple-300/70"
                             style={{
                               background:
                                 "linear-gradient(135deg,#6947ff,#eb69ff)",
@@ -179,7 +204,8 @@ export default function RoomBooking() {
                       </td>
                     </tr>
                   );
-                })}
+                })
+              )}
               </tbody>
             </table>
           </div>
