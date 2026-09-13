@@ -1,0 +1,27 @@
+title: Hostel Management System
+description: A hostel management application
+theme: jekyll-theme-primer
+
+# Exclude directories and files from Jekyll processing
+exclude:
+  - node_modules
+  - server/node_modules
+  - client/node_modules
+  - .gitignore
+  - README.md
+  - package.json
+  - package-lock.json
+  - "*/node_modules/**"
+  - "**/node_modules/**"
+  - "server/**"
+  - "client/**"
+
+# Build settings
+plugins:
+  - jekyll-github-metadata
+  - jekyll-seo-tag
+
+# Don't process markdown in dependencies
+markdown: kramdown
+kramdown:
+  input: GFM
