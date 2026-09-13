@@ -20,6 +20,7 @@ async function init() {
     port: Number(DB_PORT),
     user: DB_USER,
     password: DB_PASSWORD,
+    ssl: process.env.DB_SSL === 'true' ? { minVersion: 'TLSv1.2', rejectUnauthorized: true } : undefined,
   });
 
   try {
