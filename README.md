@@ -43,18 +43,15 @@ The application combines a high-performance **React 19 SPA (Vercel)** with a rob
 - [Key Features by Role](#-key-features-by-role)
 - [Tech Stack](#1-tech-stack)
 - [Architecture & System Flow](#2-architecture--system-flow)
-  - [High-Level Architecture](#21-high-level-architecture)
-  - [Authentication & User Synchronization Flow](#22-authentication--user-synchronization-flow)
-  - [Room Booking & Bed Allocation Flow](#23-room-booking--occupancy-allocation-flow)
-  - [Maintenance & Complaint Resolution Flow](#24-maintenance--complaint-resolution-flow)
-  - [Outing Permission & Approval Flow](#25-outing-permission--approval-flow)
-- [Database Schema (MySQL / TiDB Cloud)](#3-database-schema-mysql--tidb-cloud)
-- [Project Structure](#4-project-structure)
-- [REST API Endpoints](#5-rest-api-endpoints)
-- [Environment Variables](#6-environment-variables)
-- [Installation & Local Setup](#7-installation--local-setup)
-- [Database Initialization & Seeding](#8-database-initialization--seeding)
-- [Running Locally](#9-running-the-app-locally)
+  - [Visual System Flowchart](#21-visual-system-flowchart)
+  - [Understanding the Architecture in Plain English](#22-understanding-the-architecture-in-plain-english)
+  - [End-to-End Real-World User Journeys](#23-end-to-end-real-world-user-journeys)
+- [Project Structure](#3-project-structure)
+- [REST API Endpoints](#4-rest-api-endpoints)
+- [Environment Variables](#5-environment-variables)
+- [Installation & Local Setup](#6-installation--local-setup)
+- [Database Initialization & Seeding](#7-database-initialization--seeding)
+- [Running Locally](#8-running-the-app-locally)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -111,288 +108,103 @@ The application combines a high-performance **React 19 SPA (Vercel)** with a rob
 
 ## 2. Architecture & System Flow
 
-### 2.1 High-Level Architecture
+### 2.1 Visual System Flowchart
 
-The following diagram illustrates how the frontend, authentication provider, REST API backend, and cloud database interact:
-
-```mermaid
-graph TD
-    subgraph Client ["Client Browser (React 19 + Vite) - Deployed on Vercel"]
-        UI["React SPA Pages\n(Resident / Warden / Tech)"]
-        AC["AuthContext\n(Session & Roles)"]
-        DC["DataContext\n(In-Memory Cache & Refresh)"]
-        AX["Axios HTTP Client\n(Bearer Token Interceptor)"]
-    end
-
-    subgraph Auth ["Identity & Access"]
-        FA["Firebase Authentication\n(Google Sign-In / ID Tokens)"]
-    end
-
-    subgraph Backend ["Backend Service (Express 5) - Deployed on Render"]
-        EXP["Express REST API\n(Port 5000 / HTTPS)"]
-        AUTH_R["/api/auth"]
-        ROOM_R["/api/rooms"]
-        BOOK_R["/api/bookings"]
-        MAINT_R["/api/maintenance"]
-        OUT_R["/api/outing"]
-        TECH_R["/api/technician"]
-        ANN_R["/api/announcements"]
-        POOL["mysql2 Connection Pool\n(TLS 1.2 SSL Enabled)"]
-    end
-
-    subgraph Database ["TiDB Cloud (Serverless MySQL Database)"]
-        T_USERS[("users")]
-        T_ROOMS[("rooms")]
-        T_BOOKINGS[("booking_groups")]
-        T_MAINT[("maintenance_requests")]
-        T_OUTINGS[("outing_requests")]
-        T_ANN[("announcements")]
-    end
-
-    UI --> AC
-    UI --> DC
-    AC -->|1. Sign in / Verify| FA
-    FA -->|2. Returns JWT ID Token| AC
-    AC -->|3. Sync Profile /auth/sync| AX
-    DC -->|Fetch / Mutate Data| AX
-    AX -->|HTTPS REST Requests + Bearer Token| EXP
-
-    EXP --> AUTH_R
-    EXP --> ROOM_R
-    EXP --> BOOK_R
-    EXP --> MAINT_R
-    EXP --> OUT_R
-    EXP --> TECH_R
-    EXP --> ANN_R
-
-    AUTH_R --> POOL
-    ROOM_R --> POOL
-    BOOK_R --> POOL
-    MAINT_R --> POOL
-    OUT_R --> POOL
-    TECH_R --> POOL
-    ANN_R --> POOL
-
-    POOL --> T_USERS
-    POOL --> T_ROOMS
-    POOL --> T_BOOKINGS
-    POOL --> T_MAINT
-    POOL --> T_OUTINGS
-    POOL --> T_ANN
-```
-
----
-
-### 2.2 Authentication & User Synchronization Flow
-
-SmartHostel combines the seamless UX of Firebase Authentication with the relational integrity of a MySQL database:
+Here is the entire system at a glance — showing how users, the frontend web app, security authentication, backend server, and cloud database connect together:
 
 ```mermaid
-sequenceDiagram
-    autonumber
-    actor User as Resident / Warden / Tech
-    participant Client as React SPA (AuthContext)
-    participant Firebase as Firebase Auth
-    participant Server as Express API (/auth)
-    participant DB as TiDB Cloud MySQL (users)
-
-    User->>Client: Clicks Google Sign-In or Demo Login
-    Client->>Firebase: signInWithPopup() / Auth Provider
-    Firebase-->>Client: Firebase User (UID, Email, DisplayName, Token)
-    Client->>Server: POST /auth/sync { uid, email, name, role }
-    Server->>DB: INSERT INTO users ... ON DUPLICATE KEY UPDATE
-    DB-->>Server: User Record (Role, Roll Number, Room Number)
-    Server-->>Client: Return normalized user profile & role
-    Client->>Client: Update AuthContext & Route to role dashboard
-```
-
----
-
-### 2.3 Room Booking & Occupancy Allocation Flow
-
-Room booking features ACID transaction protection to avoid overbooking beds:
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Resident as Resident
-    actor Warden as Warden
-    participant Client as React SPA
-    participant Server as Express API (/bookings)
-    participant DB as TiDB Cloud MySQL
-
-    Resident->>Client: Selects available room & adds roll numbers
-    Client->>Server: POST /bookings { roomId, memberRollNumbers, leaderId }
-    Server->>DB: INSERT INTO booking_groups (status = 'pending')
-    DB-->>Server: Booking ID
-    Server-->>Client: Booking Submitted
-    Client->>Client: Refresh DataContext ('bookingGroups')
-
-    Note over Warden, DB: Warden reviews application in Warden Portal
-    Warden->>Client: Clicks 'Approve'
-    Client->>Server: PUT /bookings/approve { id, roomId, memberCount }
-    Note over Server, DB: Transaction Begins
-    Server->>DB: UPDATE booking_groups SET status = 'approved'
-    Server->>DB: UPDATE rooms SET occupied_beds = occupied_beds + memberCount
-    Note over Server, DB: Transaction Committed
-    Server-->>Client: Success response
-    Client->>Client: Refresh 'rooms' & 'bookingGroups' (Live bed count updates)
-```
-
----
-
-### 2.4 Maintenance & Complaint Resolution Flow
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Resident as Resident
-    actor Warden as Warden
-    actor Tech as Technician
-    participant Server as Express API (/maintenance, /technician)
-    participant DB as TiDB Cloud MySQL
-
-    Resident->>Server: POST /maintenance (Category, Issue, Priority, Room)
-    Server->>DB: INSERT INTO maintenance_requests (status = 'pending')
-    
-    par Warden Assigns
-        Warden->>Server: PUT /maintenance/assign { id, assignedTo }
-        Server->>DB: UPDATE maintenance_requests SET assigned_to = ?, status = 'inProgress'
-    and Tech Self-Accepts
-        Tech->>Server: PUT /technician/update { id, status: 'inProgress', assignedTo }
-        Server->>DB: UPDATE maintenance_requests SET status = 'inProgress'
+flowchart TD
+    subgraph USERS ["👥 1. Users (Role-Based Access)"]
+        R["👨‍🎓 Resident (Student)<br/>• Browse & book rooms<br/>• Raise repair tickets<br/>• Request outing gate-pass"]
+        W["🛡️ Warden (Admin)<br/>• Approve / reject room bookings<br/>• Manage room beds & capacity<br/>• Assign technicians & post notices"]
+        T["🔧 Technician (Staff)<br/>• View repair work queue<br/>• Self-assign & resolve issues<br/>• Analyze complaint heatmap"]
     end
 
-    Tech->>Server: PUT /technician/update { id, status: 'resolved', resolutionNotes }
-    Server->>DB: UPDATE maintenance_requests SET status = 'resolved', resolved_at = NOW()
-    Server-->>Tech: Resolution Confirmed
-    Note over Tech: Heatmap updates complaint density dynamically
+    subgraph FRONTEND ["💻 2. Frontend Web App (React 19 + Vite • Deployed on Vercel)"]
+        UI["SmartHostel Web Application<br/>• Fast, responsive dashboards tailored to each role<br/>• Live room occupancy visualizer & form validations<br/>• Instant state updates via React Context"]
+    end
+
+    subgraph AUTH ["🔑 3. Identity & Security (Firebase Auth)"]
+        AUTH_SYS["Firebase Authentication<br/>• Secure Google Sign-In & credential check<br/>• Generates verified digital tokens (JWT)"]
+    end
+
+    subgraph BACKEND ["⚙️ 4. Backend REST API (Node.js & Express 5 • Deployed on Render)"]
+        API["Express REST API Server<br/>• Enforces hostel business rules & checks permissions<br/>• Atomic bed reservation (prevents overbooking)<br/>• Routes repairs, outing gate-passes & announcements"]
+    end
+
+    subgraph DATABASE ["🗄️ 5. Cloud Database (TiDB Cloud Serverless MySQL)"]
+        DB[("Persistent Cloud Relational Database<br/>• users (profiles & roles)<br/>• rooms (beds, tariffs & occupancy)<br/>• booking_groups (student applications)<br/>• maintenance_requests (tickets & status)<br/>• outing_requests (dates & permissions)<br/>• announcements (campus notices)")]
+    end
+
+    R -->|Opens browser| UI
+    W -->|Opens browser| UI
+    T -->|Opens browser| UI
+
+    UI <-->|Verify login & issue secure token| AUTH_SYS
+    UI <-->|Send API requests with token (HTTPS)| API
+    API <-->|Read & write data safely (SSL/TLS)| DB
 ```
 
 ---
 
-### 2.5 Outing Permission & Approval Flow
+### 2.2 Understanding the Architecture in Plain English
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Resident as Resident
-    actor Warden as Warden
-    participant Server as Express API (/outing)
-    participant DB as TiDB Cloud MySQL
+If you are new to the project, here is how the 5 layers work together:
 
-    Resident->>Server: POST /outing { reason, destination, outDate, returnDate }
-    Server->>DB: INSERT INTO outing_requests (status = 'pending')
-    Server-->>Resident: Request logged
+1. **The Users (`Resident`, `Warden`, `Technician`)**:
+   - **Residents**: Students who need a room, want to report a broken light/tap, or need permission to leave campus for the weekend.
+   - **Wardens**: Administrators who have full authority to manage room capacities, approve or reject bookings, assign technicians, and broadcast announcements.
+   - **Technicians**: Hostel maintenance staff who pick up reported complaints, fix them on site, and mark them as resolved.
 
-    Warden->>Server: PUT /outing/approve { id, status: 'approved' | 'rejected' }
-    Server->>DB: UPDATE outing_requests SET status = ?
-    Server-->>Warden: Status updated
-    Note over Resident: Resident sees live approval gate-pass on dashboard
-```
+2. **The Frontend Web App (React 19 on Vercel)**:
+   - What the user sees and clicks in their browser.
+   - Built with **React 19**, **Tailwind CSS**, and **Vite** for blazing fast page loads.
+   - Adapts its navigation and screens based on who is logged in so each person only sees what they are permitted to access.
 
----
+3. **The Security Gatekeeper (Firebase Authentication)**:
+   - Verifies who you are. When a resident logs in with Google, Firebase confirms their identity and gives the browser a secure digital key (JWT Token).
+   - This key is automatically attached to every request so the backend knows the user is genuine.
 
-## 3. Database Schema (MySQL / TiDB Cloud)
+4. **The Brain (Express REST API on Render)**:
+   - A Node.js and Express 5 server hosted on the cloud.
+   - It executes all the hostel logic:
+     - *"Are there vacant beds available before letting a student book?"*
+     - *"Only let the Warden approve room bookings or change room capacity."*
+     - *"When a booking is approved, atomically update the bed count so two students never get the same bed."*
 
-The backend runs on **TiDB Cloud Serverless MySQL** with the following schema:
-
-```sql
--- 1. Users Table
-CREATE TABLE users (
-  id VARCHAR(128) PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
-  email VARCHAR(255) UNIQUE NOT NULL,
-  password VARCHAR(255) NULL,
-  role ENUM('resident', 'warden', 'technician') NOT NULL DEFAULT 'resident',
-  roll_number VARCHAR(100) NULL,
-  phone VARCHAR(50) NULL,
-  room_number VARCHAR(50) NULL,
-  floor INT NULL,
-  hostel VARCHAR(100) DEFAULT 'Main Hostel Block',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
-
--- 2. Rooms Table
-CREATE TABLE rooms (
-  id VARCHAR(64) PRIMARY KEY,
-  room_number VARCHAR(50) UNIQUE NOT NULL,
-  block VARCHAR(50) NOT NULL,
-  floor INT NOT NULL DEFAULT 1,
-  capacity INT NOT NULL DEFAULT 4,
-  occupied_beds INT NOT NULL DEFAULT 0,
-  type VARCHAR(50) DEFAULT 'Standard',
-  gender VARCHAR(20) DEFAULT 'Co-ed',
-  price_per_semester INT DEFAULT 25000,
-  status VARCHAR(50) DEFAULT 'available',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
-
--- 3. Booking Groups Table
-CREATE TABLE booking_groups (
-  id VARCHAR(64) PRIMARY KEY,
-  room_id VARCHAR(64) NOT NULL,
-  room_number VARCHAR(50) NOT NULL,
-  leader_id VARCHAR(128) NOT NULL,
-  leader_roll VARCHAR(100) NULL,
-  member_roll_numbers JSON NULL,
-  status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
-  rejection_reason TEXT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
-
--- 4. Maintenance Requests Table
-CREATE TABLE maintenance_requests (
-  id VARCHAR(64) PRIMARY KEY,
-  user_id VARCHAR(128) NULL,
-  resident_name VARCHAR(255) NULL,
-  resident_email VARCHAR(255) NULL,
-  roll_number VARCHAR(100) NULL,
-  room_number VARCHAR(50) NOT NULL,
-  floor INT NULL,
-  category VARCHAR(100) NOT NULL,
-  issue TEXT NOT NULL,
-  priority ENUM('low', 'medium', 'high') NOT NULL DEFAULT 'medium',
-  status ENUM('pending', 'inProgress', 'resolved') NOT NULL DEFAULT 'pending',
-  assigned_to VARCHAR(255) NULL,
-  resolution_notes TEXT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  resolved_at TIMESTAMP NULL
-) ENGINE=InnoDB;
-
--- 5. Outing Requests Table
-CREATE TABLE outing_requests (
-  id VARCHAR(64) PRIMARY KEY,
-  user_id VARCHAR(128) NULL,
-  resident_name VARCHAR(255) NOT NULL,
-  resident_email VARCHAR(255) NULL,
-  roll_number VARCHAR(100) NULL,
-  room_number VARCHAR(50) NULL,
-  reason TEXT NOT NULL,
-  destination VARCHAR(255) NOT NULL,
-  out_date VARCHAR(50) NOT NULL,
-  return_date VARCHAR(50) NOT NULL,
-  status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
-
--- 6. Announcements Table
-CREATE TABLE announcements (
-  id VARCHAR(64) PRIMARY KEY,
-  title VARCHAR(255) NOT NULL,
-  message TEXT NOT NULL,
-  priority ENUM('normal', 'important', 'urgent') NOT NULL DEFAULT 'normal',
-  author VARCHAR(255) DEFAULT 'Hostel Warden',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
-```
+5. **The Safe Vault (TiDB Cloud MySQL Database)**:
+   - An enterprise-grade, distributed relational MySQL database hosted in the cloud.
+   - It permanently stores all student profiles, room lists, booking records, maintenance tickets, and gate-passes with high availability and SSL encryption.
 
 ---
 
-## 4. Project Structure
+### 2.3 End-to-End Real-World User Journeys
+
+#### 🛏️ 1. Room Booking & Occupancy Allocation
+1. **Resident** opens the *Room Booking* page, browses vacant rooms (with live color-coded bed occupancy), and submits a booking with roommate roll numbers.
+2. The request is saved with status `pending`.
+3. **Warden** opens *Booking Approvals*, reviews the application, and clicks **Approve**.
+4. The backend runs a safe database transaction: it marks the booking as `approved` and immediately increments the room's `occupied_beds` count.
+5. The resident's dashboard updates instantly to show their confirmed room number.
+
+#### 🛠️ 2. Maintenance & Complaint Resolution
+1. **Resident** files a repair ticket (e.g., *Plumbing - Tap leaking in Room 102*, Priority: *Medium*).
+2. **Warden** reviews pending tickets and assigns them to an available technician (or the technician self-accepts directly).
+3. The ticket status moves from `pending` to `inProgress`.
+4. Once repaired, the **Technician** marks it `resolved` and adds resolution notes.
+5. The **Technician Heatmap** dynamically aggregates all complaints by floor and room number, helping staff spot recurring maintenance issues across the building.
+
+#### 🚪 3. Outing Gate-Pass Approval
+1. **Resident** applies for a weekend leave or hackathon outing, specifying departure time, destination, and return date.
+2. The request appears on the **Warden's** *Outing Approval* board.
+3. The Warden clicks **Approve** (or **Reject** with a reason).
+4. The Resident receives a live approved digital gate-pass on their screen that can be shown at the hostel gate.
+
+#### 📢 4. Campus Announcements
+1. The **Warden** posts a notice (marked as *Normal*, *Important*, or *Urgent*).
+2. The announcement is broadcast across all Resident, Warden, and Technician dashboards immediately.
+
+## 3. Project Structure
 
 ```
 hostel/
@@ -451,7 +263,7 @@ hostel/
 
 ---
 
-## 5. REST API Endpoints
+## 4. REST API Endpoints
 
 All endpoints are mounted under `/api/*` (as well as the root for convenience):
 
@@ -496,7 +308,7 @@ All endpoints are mounted under `/api/*` (as well as the root for convenience):
 
 ---
 
-## 6. Environment Variables
+## 5. Environment Variables
 
 ### Client (`client/.env`)
 
@@ -527,7 +339,7 @@ DB_SSL=true
 
 ---
 
-## 7. Installation & Local Setup
+## 6. Installation & Local Setup
 
 ### 1. Clone the repository
 ```bash
@@ -549,7 +361,7 @@ npm install
 
 ---
 
-## 8. Database Initialization & Seeding
+## 7. Database Initialization & Seeding
 
 The server includes an automated setup script that creates the required MySQL database tables and seeds demo accounts, sample rooms, announcements, and mock complaints:
 
@@ -567,7 +379,7 @@ node initDb.js
 
 ---
 
-## 9. Running the App Locally
+## 8. Running the App Locally
 
 Start the backend and frontend in separate terminals:
 
