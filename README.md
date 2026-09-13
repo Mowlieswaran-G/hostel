@@ -113,36 +113,39 @@ The application combines a high-performance **React 19 SPA (Vercel)** with a rob
 Here is the entire system at a glance — showing how users, the frontend web app, security authentication, backend server, and cloud database connect together:
 
 ```mermaid
-flowchart TD
-    subgraph USERS ["👥 1. Users (Role-Based Access)"]
-        R["👨‍🎓 Resident (Student)<br/>• Browse & book rooms<br/>• Raise repair tickets<br/>• Request outing gate-pass"]
-        W["🛡️ Warden (Admin)<br/>• Approve / reject room bookings<br/>• Manage room beds & capacity<br/>• Assign technicians & post notices"]
-        T["🔧 Technician (Staff)<br/>• View repair work queue<br/>• Self-assign & resolve issues<br/>• Analyze complaint heatmap"]
+graph TD
+    subgraph Users ["1. Users (Role-Based Access)"]
+        R["👨‍🎓 Resident (Student)<br/>Browse and book rooms, raise repair tickets, request outings"]
+        W["🛡️ Warden (Admin)<br/>Approve bookings, manage room beds, assign staff"]
+        T["🔧 Technician (Staff)<br/>View repair queue, resolve issues, view complaint heatmap"]
     end
 
-    subgraph FRONTEND ["💻 2. Frontend Web App (React 19 + Vite • Deployed on Vercel)"]
-        UI["SmartHostel Web Application<br/>• Fast, responsive dashboards tailored to each role<br/>• Live room occupancy visualizer & form validations<br/>• Instant state updates via React Context"]
+    subgraph Client ["2. Frontend Web App (Deployed on Vercel)"]
+        UI["React 19 + Vite Single Page Application<br/>Responsive role-tailored dashboards and live room visualizer"]
     end
 
-    subgraph AUTH ["🔑 3. Identity & Security (Firebase Auth)"]
-        AUTH_SYS["Firebase Authentication<br/>• Secure Google Sign-In & credential check<br/>• Generates verified digital tokens (JWT)"]
+    subgraph Security ["3. Authentication (Firebase Auth)"]
+        AUTH["Firebase Authentication<br/>Google Sign-In and secure JWT identity verification"]
     end
 
-    subgraph BACKEND ["⚙️ 4. Backend REST API (Node.js & Express 5 • Deployed on Render)"]
-        API["Express REST API Server<br/>• Enforces hostel business rules & checks permissions<br/>• Atomic bed reservation (prevents overbooking)<br/>• Routes repairs, outing gate-passes & announcements"]
+    subgraph Backend ["4. Backend REST API (Deployed on Render)"]
+        API["Node.js + Express 5 REST API Server<br/>Transactional booking logic, staff assignment, outing approvals"]
     end
 
-    subgraph DATABASE ["🗄️ 5. Cloud Database (TiDB Cloud Serverless MySQL)"]
-        DB[("Persistent Cloud Relational Database<br/>• users (profiles & roles)<br/>• rooms (beds, tariffs & occupancy)<br/>• booking_groups (student applications)<br/>• maintenance_requests (tickets & status)<br/>• outing_requests (dates & permissions)<br/>• announcements (campus notices)")]
+    subgraph Storage ["5. Cloud Database (TiDB Cloud MySQL)"]
+        DB[("TiDB Cloud Serverless MySQL<br/>Users, Rooms, Bookings, Maintenance, Outings")]
     end
 
-    R -->|Opens browser| UI
-    W -->|Opens browser| UI
-    T -->|Opens browser| UI
+    R -->|Opens Web App| UI
+    W -->|Opens Web App| UI
+    T -->|Opens Web App| UI
 
-    UI <-->|Verify login & issue secure token| AUTH_SYS
-    UI <-->|Send API requests with token (HTTPS)| API
-    API <-->|Read & write data safely (SSL/TLS)| DB
+    UI -->|1. Sign in and verify| AUTH
+    AUTH -->|2. Return secure token| UI
+    UI -->|3. HTTPS API requests with token| API
+    API -->|4. Query and save data via SSL| DB
+    DB -->|5. Return stored records| API
+    API -->|6. Send JSON response to frontend| UI
 ```
 
 ---
