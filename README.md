@@ -2,200 +2,503 @@
 
 # 🏠 SmartHostel
 
-### Transparent, fair, and secure hostel management for Residents, Wardens & Technicians
+### Transparent, Fair, and Intelligent Hostel Management System
 
-[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
-[![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
-[![Firebase](https://img.shields.io/badge/Firebase-Auth%20%2B%20Firestore-FFCA28?logo=firebase&logoColor=black)](https://firebase.google.com/)
+[![React](https://img.shields.io/badge/React-19.2-61DAFB?logo=react&logoColor=black)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-8.2-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Node.js](https://img.shields.io/badge/Node.js-Express%205-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind-4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-000000?logo=vercel&logoColor=white)](https://vercel.com/)
+[![Database](https://img.shields.io/badge/Database-TiDB%20Cloud%20MySQL-0052CC?logo=mysql&logoColor=white)](https://tidbcloud.com/)
+[![Firebase](https://img.shields.io/badge/Firebase-Authentication-FFCA28?logo=firebase&logoColor=black)](https://firebase.google.com/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.3-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![Deployed on Vercel](https://img.shields.io/badge/Frontend-Vercel-000000?logo=vercel&logoColor=white)](https://bookmyroom-zyro.vercel.app)
+[![Deployed on Render](https://img.shields.io/badge/Backend-Render-46E3B7?logo=render&logoColor=black)](https://smarthostel-api.onrender.com)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](#license)
 
-**[🚀 Live Demo](https://bookmybedbitsathy.vercel.app)**
+**[🚀 Live Demo](https://bookmyroom-zyro.vercel.app)** &nbsp;•&nbsp; **[⚡ API Backend](https://smarthostel-api.onrender.com)**
 
 </div>
 
 ---
 
-SmartHostel is a role-based web application for managing day-to-day hostel operations: room
-booking, maintenance requests, outing requests, announcements, and a complaint heatmap for
-technicians. The frontend is a React SPA that talks directly to **Firebase (Auth + Firestore)**
-for data and identity, with a lightweight **Express** service scaffolded for future/custom API
-endpoints.
+**SmartHostel** is a modern, full-stack, role-based web application designed to streamline daily hostel operations. It empowers **Residents**, **Wardens**, and **Technicians** through intuitive workflows for room booking, live room & occupancy management, maintenance reporting with complaint heatmaps, outing approvals, and campus-wide announcements.
 
-## 🔗 Live Demo
+The application combines a high-performance **React 19 SPA (Vercel)** with a robust **Node.js/Express 5 REST API (Render)** and a resilient cloud-native relational database powered by **TiDB Cloud (Serverless MySQL)** with **Firebase Authentication** for identity management.
 
-> 👉 **[https://bookmybedbitsathy.vercel.app](https://bookmybedbitsathy.vercel.app)**
+---
+
+## 🔗 Live Deployments
+
+| Component | Platform | URL |
+|---|---|---|
+| **Frontend Web App** | **Vercel** | [https://bookmyroom-zyro.vercel.app](https://bookmyroom-zyro.vercel.app) |
+| **Backend REST API** | **Render** | [https://smarthostel-api.onrender.com](https://smarthostel-api.onrender.com) |
+| **Cloud Database** | **TiDB Cloud (AWS ap-southeast-1)** | Serverless MySQL Cluster (SSL/TLS 1.2) |
+
+---
 
 ## 📑 Table of Contents
 
-- [Live Demo](#-live-demo)
-- [Features](#-features)
+- [Live Deployments](#-live-deployments)
+- [Preview](#-preview)
+- [Key Features by Role](#-key-features-by-role)
 - [Tech Stack](#1-tech-stack)
-- [Project Structure](#2-project-structure)
-- [Architecture](#3-architecture--how-the-pieces-talk-to-each-other)
-- [Prerequisites](#4-prerequisites)
-- [Environment Variables](#5-environment-variables)
-- [Installation](#6-installation)
-- [Seeding Firestore](#7-seeding-firestore-with-demo-data)
-- [Running Locally](#8-running-the-app-locally)
-- [Execution Flow](#9-end-to-end-execution-flow)
-- [Notes & Recommendations](#10-notes--recommendations)
+- [Architecture & System Flow](#2-architecture--system-flow)
+  - [High-Level Architecture](#21-high-level-architecture)
+  - [Authentication & User Synchronization Flow](#22-authentication--user-synchronization-flow)
+  - [Room Booking & Bed Allocation Flow](#23-room-booking--occupancy-allocation-flow)
+  - [Maintenance & Complaint Resolution Flow](#24-maintenance--complaint-resolution-flow)
+  - [Outing Permission & Approval Flow](#25-outing-permission--approval-flow)
+- [Database Schema (MySQL / TiDB Cloud)](#3-database-schema-mysql--tidb-cloud)
+- [Project Structure](#4-project-structure)
+- [REST API Endpoints](#5-rest-api-endpoints)
+- [Environment Variables](#6-environment-variables)
+- [Installation & Local Setup](#7-installation--local-setup)
+- [Database Initialization & Seeding](#8-database-initialization--seeding)
+- [Running Locally](#9-running-the-app-locally)
 - [Contributing](#contributing)
 - [License](#license)
+
+---
 
 ## 📸 Preview
 
 <div align="center">
-  <img src="./Screenshot 2026-09-10 102759.png" alt="SmartHostel dashboard preview" width="800" />
+  <img src="./Screenshot 2026-09-10 102759.png" alt="SmartHostel Dashboard Preview" width="850" />
 </div>
 
-> Add more screenshots or a GIF of the booking/approval flow to the repo root for an even richer
-> preview — GitHub renders them inline automatically once pushed.
+---
 
-## ✨ Features
+## ✨ Key Features by Role
 
-**Resident**
-- 🔍 Browse rooms and submit group booking requests
-- 🛠️ Raise maintenance requests with category & priority
-- 🧳 Request outings and track approval status
-- 📢 View hostel announcements
+### 👨‍🎓 Resident
+- **Room Booking**: Real-time room availability browser with live occupancy visualizer; support for group bookings with co-resident roll numbers.
+- **My Bookings**: Real-time status tracking for pending, approved, or rejected room reservations.
+- **Maintenance Requests**: Instant issue reporting categorized by discipline (Electrical, Plumbing, Furniture, Wi-Fi, Cleaning) with custom urgency/priority levels.
+- **Outing Requests**: Digital gate-pass requests with departure/arrival timestamps, destination, and purpose tracking.
+- **Announcements**: Broadcast board for critical notices and administrative updates.
 
-**Warden**
-- ✅ Approve / reject room bookings, adjusting live occupancy
-- 🧰 Assign technicians to maintenance requests and track resolution
-- 🚦 Approve / reject resident outing requests
-- 📣 Post announcements to all residents
+### 🛡️ Warden
+- **Live Room Management**: Complete control to add rooms, configure capacities, update tariffs, free up occupied rooms, and delete rooms.
+- **Booking Approvals**: Review room applications; single-click approval atomically updates room bed occupancy via MySQL transactions.
+- **Maintenance Management**: Assign complaints to specific technicians and track resolution lifecycles.
+- **Outing Approvals**: Approve or reject outing gate-passes with optional rejection explanations.
+- **Announcements**: Post priority notices (Normal, Important, Urgent) accessible by all residents and staff.
 
-**Technician**
-- 📋 View and self-accept assigned maintenance tasks
-- 🔥 Visualise complaint density by room/floor on a heatmap
+### 🔧 Technician
+- **Task Management Portal**: Dedicated dashboard displaying all unassigned and assigned maintenance tasks.
+- **Resolution Workflow**: Self-assign complaints, add resolution notes, and mark tasks as resolved with completion timestamps.
+- **Complaint Heatmap**: Visual floor-by-floor and room-by-room complaint density analysis powered by Recharts to pinpoint recurrent maintenance hotspots.
 
 ---
 
 ## 1. Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Frontend | React 19, Vite 8, React Router DOM 7, Tailwind CSS 4 |
-| State/Data | React Context (`AuthContext`, `DataContext`), Firebase Firestore (real-time-style reads) |
-| Auth | Firebase Authentication |
-| HTTP client | Axios (for calls to the Express API, if/when used) |
-| Charts | Recharts |
-| UI helpers | Headless UI, React Icons, React Hot Toast |
-| Backend | Node.js, Express 5 |
-| Backend auth/data | Firebase Admin SDK, express-validator |
-| Linting | Oxlint |
-| Deployment | Vercel (client), Node host of your choice (server) |
+| Layer | Technology | Details |
+|---|---|---|
+| **Frontend Framework** | **React 19.2** + **Vite 8.2** | High-performance SPA with client-side routing & code-splitting |
+| **Styling & UI** | **Tailwind CSS 4.3** | Custom glassmorphism, responsive dark/light modes, micro-animations |
+| **UI Components** | **Headless UI**, **React Icons**, **React Hot Toast** | Accessible dialogs, toast notifications, icon suites |
+| **Data Visualization** | **Recharts 3.10** | Heatmaps and complaint density distribution charts |
+| **Client State Management** | **React Context API** | Centralized `AuthContext`, `DataContext`, and `ThemeContext` |
+| **HTTP Client** | **Axios** | Configured with automatic Firebase Bearer Token authentication interceptor |
+| **Backend API** | **Node.js** + **Express 5.2** | Structured REST API with CORS, route splitting, and error handling |
+| **Database** | **TiDB Cloud (Serverless MySQL)** | Distributed MySQL-compatible cloud database with connection pooling & TLS |
+| **Database Driver** | **mysql2/promise** | Asynchronous promise-based connection pool with SSL support |
+| **Authentication** | **Firebase Auth** | Google Sign-in & email auth with automated backend profile sync |
+| **Deployment** | **Vercel** & **Render** | Frontend continuous deployment on Vercel; Express API hosted on Render |
 
 ---
 
-## 2. Project Structure
+## 2. Architecture & System Flow
 
-The repository is split into two independently-run apps plus a set of maintenance/tooling
-scripts at the root:
+### 2.1 High-Level Architecture
+
+The following diagram illustrates how the frontend, authentication provider, REST API backend, and cloud database interact:
+
+```mermaid
+graph TD
+    subgraph Client ["Client Browser (React 19 + Vite) - Deployed on Vercel"]
+        UI["React SPA Pages\n(Resident / Warden / Tech)"]
+        AC["AuthContext\n(Session & Roles)"]
+        DC["DataContext\n(In-Memory Cache & Refresh)"]
+        AX["Axios HTTP Client\n(Bearer Token Interceptor)"]
+    end
+
+    subgraph Auth ["Identity & Access"]
+        FA["Firebase Authentication\n(Google Sign-In / ID Tokens)"]
+    end
+
+    subgraph Backend ["Backend Service (Express 5) - Deployed on Render"]
+        EXP["Express REST API\n(Port 5000 / HTTPS)"]
+        AUTH_R["/api/auth"]
+        ROOM_R["/api/rooms"]
+        BOOK_R["/api/bookings"]
+        MAINT_R["/api/maintenance"]
+        OUT_R["/api/outing"]
+        TECH_R["/api/technician"]
+        ANN_R["/api/announcements"]
+        POOL["mysql2 Connection Pool\n(TLS 1.2 SSL Enabled)"]
+    end
+
+    subgraph Database ["TiDB Cloud (Serverless MySQL Database)"]
+        T_USERS[("users")]
+        T_ROOMS[("rooms")]
+        T_BOOKINGS[("booking_groups")]
+        T_MAINT[("maintenance_requests")]
+        T_OUTINGS[("outing_requests")]
+        T_ANN[("announcements")]
+    end
+
+    UI --> AC
+    UI --> DC
+    AC -->|1. Sign in / Verify| FA
+    FA -->|2. Returns JWT ID Token| AC
+    AC -->|3. Sync Profile /auth/sync| AX
+    DC -->|Fetch / Mutate Data| AX
+    AX -->|HTTPS REST Requests + Bearer Token| EXP
+
+    EXP --> AUTH_R
+    EXP --> ROOM_R
+    EXP --> BOOK_R
+    EXP --> MAINT_R
+    EXP --> OUT_R
+    EXP --> TECH_R
+    EXP --> ANN_R
+
+    AUTH_R --> POOL
+    ROOM_R --> POOL
+    BOOK_R --> POOL
+    MAINT_R --> POOL
+    OUT_R --> POOL
+    TECH_R --> POOL
+    ANN_R --> POOL
+
+    POOL --> T_USERS
+    POOL --> T_ROOMS
+    POOL --> T_BOOKINGS
+    POOL --> T_MAINT
+    POOL --> T_OUTINGS
+    POOL --> T_ANN
+```
+
+---
+
+### 2.2 Authentication & User Synchronization Flow
+
+SmartHostel combines the seamless UX of Firebase Authentication with the relational integrity of a MySQL database:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Resident / Warden / Tech
+    participant Client as React SPA (AuthContext)
+    participant Firebase as Firebase Auth
+    participant Server as Express API (/auth)
+    participant DB as TiDB Cloud MySQL (users)
+
+    User->>Client: Clicks Google Sign-In or Demo Login
+    Client->>Firebase: signInWithPopup() / Auth Provider
+    Firebase-->>Client: Firebase User (UID, Email, DisplayName, Token)
+    Client->>Server: POST /auth/sync { uid, email, name, role }
+    Server->>DB: INSERT INTO users ... ON DUPLICATE KEY UPDATE
+    DB-->>Server: User Record (Role, Roll Number, Room Number)
+    Server-->>Client: Return normalized user profile & role
+    Client->>Client: Update AuthContext & Route to role dashboard
+```
+
+---
+
+### 2.3 Room Booking & Occupancy Allocation Flow
+
+Room booking features ACID transaction protection to avoid overbooking beds:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Resident as Resident
+    actor Warden as Warden
+    participant Client as React SPA
+    participant Server as Express API (/bookings)
+    participant DB as TiDB Cloud MySQL
+
+    Resident->>Client: Selects available room & adds roll numbers
+    Client->>Server: POST /bookings { roomId, memberRollNumbers, leaderId }
+    Server->>DB: INSERT INTO booking_groups (status = 'pending')
+    DB-->>Server: Booking ID
+    Server-->>Client: Booking Submitted
+    Client->>Client: Refresh DataContext ('bookingGroups')
+
+    Note over Warden, DB: Warden reviews application in Warden Portal
+    Warden->>Client: Clicks 'Approve'
+    Client->>Server: PUT /bookings/approve { id, roomId, memberCount }
+    Note over Server, DB: Transaction Begins
+    Server->>DB: UPDATE booking_groups SET status = 'approved'
+    Server->>DB: UPDATE rooms SET occupied_beds = occupied_beds + memberCount
+    Note over Server, DB: Transaction Committed
+    Server-->>Client: Success response
+    Client->>Client: Refresh 'rooms' & 'bookingGroups' (Live bed count updates)
+```
+
+---
+
+### 2.4 Maintenance & Complaint Resolution Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Resident as Resident
+    actor Warden as Warden
+    actor Tech as Technician
+    participant Server as Express API (/maintenance, /technician)
+    participant DB as TiDB Cloud MySQL
+
+    Resident->>Server: POST /maintenance (Category, Issue, Priority, Room)
+    Server->>DB: INSERT INTO maintenance_requests (status = 'pending')
+    
+    par Warden Assigns
+        Warden->>Server: PUT /maintenance/assign { id, assignedTo }
+        Server->>DB: UPDATE maintenance_requests SET assigned_to = ?, status = 'inProgress'
+    and Tech Self-Accepts
+        Tech->>Server: PUT /technician/update { id, status: 'inProgress', assignedTo }
+        Server->>DB: UPDATE maintenance_requests SET status = 'inProgress'
+    end
+
+    Tech->>Server: PUT /technician/update { id, status: 'resolved', resolutionNotes }
+    Server->>DB: UPDATE maintenance_requests SET status = 'resolved', resolved_at = NOW()
+    Server-->>Tech: Resolution Confirmed
+    Note over Tech: Heatmap updates complaint density dynamically
+```
+
+---
+
+### 2.5 Outing Permission & Approval Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Resident as Resident
+    actor Warden as Warden
+    participant Server as Express API (/outing)
+    participant DB as TiDB Cloud MySQL
+
+    Resident->>Server: POST /outing { reason, destination, outDate, returnDate }
+    Server->>DB: INSERT INTO outing_requests (status = 'pending')
+    Server-->>Resident: Request logged
+
+    Warden->>Server: PUT /outing/approve { id, status: 'approved' | 'rejected' }
+    Server->>DB: UPDATE outing_requests SET status = ?
+    Server-->>Warden: Status updated
+    Note over Resident: Resident sees live approval gate-pass on dashboard
+```
+
+---
+
+## 3. Database Schema (MySQL / TiDB Cloud)
+
+The backend runs on **TiDB Cloud Serverless MySQL** with the following schema:
+
+```sql
+-- 1. Users Table
+CREATE TABLE users (
+  id VARCHAR(128) PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password VARCHAR(255) NULL,
+  role ENUM('resident', 'warden', 'technician') NOT NULL DEFAULT 'resident',
+  roll_number VARCHAR(100) NULL,
+  phone VARCHAR(50) NULL,
+  room_number VARCHAR(50) NULL,
+  floor INT NULL,
+  hostel VARCHAR(100) DEFAULT 'Main Hostel Block',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- 2. Rooms Table
+CREATE TABLE rooms (
+  id VARCHAR(64) PRIMARY KEY,
+  room_number VARCHAR(50) UNIQUE NOT NULL,
+  block VARCHAR(50) NOT NULL,
+  floor INT NOT NULL DEFAULT 1,
+  capacity INT NOT NULL DEFAULT 4,
+  occupied_beds INT NOT NULL DEFAULT 0,
+  type VARCHAR(50) DEFAULT 'Standard',
+  gender VARCHAR(20) DEFAULT 'Co-ed',
+  price_per_semester INT DEFAULT 25000,
+  status VARCHAR(50) DEFAULT 'available',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- 3. Booking Groups Table
+CREATE TABLE booking_groups (
+  id VARCHAR(64) PRIMARY KEY,
+  room_id VARCHAR(64) NOT NULL,
+  room_number VARCHAR(50) NOT NULL,
+  leader_id VARCHAR(128) NOT NULL,
+  leader_roll VARCHAR(100) NULL,
+  member_roll_numbers JSON NULL,
+  status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
+  rejection_reason TEXT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- 4. Maintenance Requests Table
+CREATE TABLE maintenance_requests (
+  id VARCHAR(64) PRIMARY KEY,
+  user_id VARCHAR(128) NULL,
+  resident_name VARCHAR(255) NULL,
+  resident_email VARCHAR(255) NULL,
+  roll_number VARCHAR(100) NULL,
+  room_number VARCHAR(50) NOT NULL,
+  floor INT NULL,
+  category VARCHAR(100) NOT NULL,
+  issue TEXT NOT NULL,
+  priority ENUM('low', 'medium', 'high') NOT NULL DEFAULT 'medium',
+  status ENUM('pending', 'inProgress', 'resolved') NOT NULL DEFAULT 'pending',
+  assigned_to VARCHAR(255) NULL,
+  resolution_notes TEXT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  resolved_at TIMESTAMP NULL
+) ENGINE=InnoDB;
+
+-- 5. Outing Requests Table
+CREATE TABLE outing_requests (
+  id VARCHAR(64) PRIMARY KEY,
+  user_id VARCHAR(128) NULL,
+  resident_name VARCHAR(255) NOT NULL,
+  resident_email VARCHAR(255) NULL,
+  roll_number VARCHAR(100) NULL,
+  room_number VARCHAR(50) NULL,
+  reason TEXT NOT NULL,
+  destination VARCHAR(255) NOT NULL,
+  out_date VARCHAR(50) NOT NULL,
+  return_date VARCHAR(50) NOT NULL,
+  status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- 6. Announcements Table
+CREATE TABLE announcements (
+  id VARCHAR(64) PRIMARY KEY,
+  title VARCHAR(255) NOT NULL,
+  message TEXT NOT NULL,
+  priority ENUM('normal', 'important', 'urgent') NOT NULL DEFAULT 'normal',
+  author VARCHAR(255) DEFAULT 'Hostel Warden',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+```
+
+---
+
+## 4. Project Structure
 
 ```
 hostel/
-├── client/                        # React + Vite frontend ("SmartHostel" UI)
+├── client/                              # Frontend React 19 + Vite Application
 │   ├── src/
-│   │   ├── main.jsx                # App entry point, mounted into index.html #root
-│   │   ├── App.jsx                 # Route table (role-based routes)
+│   │   ├── main.jsx                      # App entry point with Context Providers
+│   │   ├── App.jsx                       # Route registry with role guards
 │   │   ├── context/
-│   │   │   ├── AuthContext.jsx     # Firebase auth state, current user, profile, role
-│   │   │   └── DataContext.jsx     # Central Firestore data store (rooms, requests, etc.)
-│   │   ├── firebase/
-│   │   │   └── config.js           # Firebase app + Firestore + Auth initialization
+│   │   │   ├── AuthContext.jsx           # Firebase auth listener & MySQL sync
+│   │   │   ├── DataContext.jsx           # In-memory centralized data store
+│   │   │   └── ThemeContext.jsx          # Dark / Light theme provider
 │   │   ├── services/
-│   │   │   └── booking.js          # createBooking / approveBooking / rejectBooking helpers
-│   │   ├── components/             # Navbar, Modal, Skeleton, StatusBadge, DashboardGreeting…
+│   │   │   ├── api.js                    # Axios instance with auth interceptor
+│   │   │   ├── booking.js                # Room booking API helpers
+│   │   │   ├── rooms.js                  # Room management API helpers
+│   │   │   ├── maintenance.js            # Maintenance request API helpers
+│   │   │   ├── outing.js                 # Outing permission API helpers
+│   │   │   └── technician.js             # Technician task API helpers
+│   │   ├── firebase/
+│   │   │   ├── config.js                 # Firebase Client SDK initialization
+│   │   │   └── auth.js                   # Google sign-in & sign-out handlers
+│   │   ├── components/                   # Navbar, RoleSelector, Modals, Badges...
 │   │   └── pages/
-│   │       ├── Resident/           # ResidentDashboard, RoomBooking, MyBookings,
-│   │       │                       # MaintenanceRequest, OutingRequest
-│   │       ├── Warden/             # BookingApproval, MaintenanceMgmt, OutingApproval
-│   │       └── Technician/         # TechnicianDashboard, HeatmapPage
-│   ├── index.html
-│   ├── vite.config.js               # Dev server (port 3000) + /api proxy to :5000
-│   ├── tailwind.config.js
-│   ├── vercel.json                  # SPA rewrite rules for Vercel
-│   ├── .oxlintrc.json
-│   ├── .env                         # VITE_* Firebase config + API base URL
+│   │       ├── Login/                    # LoginPage & RoleSelector
+│   │       ├── Register/                 # User registration page
+│   │       ├── Resident/                 # Resident Dashboard, RoomBooking, MyBookings,
+│   │       │                             # MaintenanceRequest, OutingRequest
+│   │       ├── Warden/                   # Warden Dashboard, RoomManagement,
+│   │       │                             # BookingApproval, MaintenanceMgmt, OutingApproval
+│   │       └── Technician/               # Technician Dashboard, HeatmapPage
+│   ├── .env                             # Local development environment variables
+│   ├── .env.production                  # Production environment variables (Render backend URL)
+│   ├── vite.config.js                   # Vite configuration with /api proxy & chunk splitting
+│   ├── vercel.json                      # Single Page App rewrite rule for Vercel
 │   └── package.json
 │
-├── server/                         # Express backend (SmartHostel Backend API)
-│   ├── index.js                     # App bootstrap, CORS, JSON body parsing, health route
-│   ├── .env                         # PORT, Firebase Admin credentials (not included in repo)
+├── server/                              # Backend Express 5 REST API
+│   ├── config/
+│   │   └── db.js                        # TiDB Cloud MySQL connection pool (mysql2)
+│   ├── routes/
+│   │   ├── auth.js                      # User profile sync, login, registration
+│   │   ├── rooms.js                     # CRUD rooms & occupancy management
+│   │   ├── bookings.js                  # Booking submission & transactional approval
+│   │   ├── maintenance.js               # Maintenance ticketing & technician assignment
+│   │   ├── outing.js                    # Outing request submission & warden approvals
+│   │   ├── technician.js                # Technician tasks & status resolution
+│   │   └── announcements.js             # Campus announcements management
+│   ├── index.js                         # Express bootstrap, CORS & route mounting
+│   ├── initDb.js                        # Automated table creation & seed script
+│   ├── .env                             # Database connection credentials
+│   ├── .env.example                     # Reference environment configuration
 │   └── package.json
 │
-└── scripts/ (repo root)
-    ├── seedRooms.mjs                # Populates Firestore `rooms` collection (30 rooms)
-    ├── seedAll.mjs                  # Seeds maintenanceRequests, outingRequests,
-    │                                 # announcements, bookingGroups with demo data
-    ├── migrateToContext.cjs         # One-off codegen: rewrote several pages to use
-    │                                 # the shared DataContext instead of ad-hoc fetches
-    └── addSkeletons.cjs             # One-off codegen: swapped "Loading..." text for
-                                      # <Skeleton /> placeholders across pages
+└── README.md
 ```
-
-> The `migrateToContext.cjs` and `addSkeletons.cjs` scripts are **developer tooling**, not part
-> of the running app. They were used once to batch-edit source files during development and are
-> safe to ignore unless you're doing a similar refactor.
 
 ---
 
-## 3. Architecture — How the Pieces Talk to Each Other
+## 5. REST API Endpoints
 
-```
-┌─────────────────────────────┐
-│        Browser (SPA)        │
-│  React + Vite (port 3000)   │
-└──────────────┬───────────────┘
-               │
-   ┌───────────┼─────────────────────────────┐
-   │           │                             │
-   ▼           ▼                             ▼
-Firebase    Firebase                  Express API (port 5000)
-  Auth      Firestore                 (via Axios, /api/* → proxied
-(login/     (rooms, bookingGroups,     by Vite dev server)
- signup)     maintenanceRequests,
-             outingRequests,
-             announcements)
-```
+All endpoints are mounted under `/api/*` (as well as the root for convenience):
 
-- **Authentication**: The client uses the Firebase Auth SDK directly (`src/firebase/config.js`).
-  `AuthContext` listens to `onAuthStateChanged`, fetches the user's role/profile, and exposes
-  `user`, `profile`, and role helpers to the rest of the app.
-- **Data**: `DataContext` is the single source of truth for Firestore collections
-  (`rooms`, `bookingGroups`, `maintenanceRequests`, `outingRequests`, `announcements`). Pages
-  consume this via `useData()` and call `refreshCollection('<name>')` after a write so the UI
-  reflects the latest state (there's no live `onSnapshot` — refresh is explicit, triggered after
-  actions like approve/reject/assign).
-- **Backend (Express)**: Currently a minimal scaffold — CORS, JSON parsing, dotenv, and a single
-  health-check route (`GET /` → `{status: "ok"}`). It's wired up with `firebase-admin` and
-  `express-validator` as dependencies, meaning it's intended to host privileged operations
-  (e.g. server-verified writes, admin-only actions) that shouldn't be trusted to client-side
-  Firestore rules alone — but as shipped, most reads/writes happen straight from the client to
-  Firestore.
-- **Dev proxy**: In development, `vite.config.js` proxies any request to `/api/*` on
-  `localhost:3000` to `http://localhost:5000` (stripping the `/api` prefix), so the client can
-  call the Express server without CORS friction while developing.
+### Authentication (`/api/auth`)
+- `POST /api/auth/sync` — Synchronize Firebase user profile to MySQL database
+- `POST /api/auth/login` — Authenticate users with credentials and role
+- `POST /api/auth/register` — Register a new resident, warden, or technician
+- `GET /api/auth/profile/:identifier` — Fetch profile by UID or email
 
----
+### Room Management (`/api/rooms`)
+- `GET /api/rooms` — Fetch all hostel rooms with live bed occupancy
+- `GET /api/rooms/:id` — Fetch details for a specific room
+- `POST /api/rooms` — Create a new room (Warden)
+- `PUT /api/rooms/:id` — Update room details, capacity, or occupancy (Warden)
+- `PUT /api/rooms/:id/free` — Reset room beds to 0 and mark available (Warden)
+- `DELETE /api/rooms/:id` — Remove a room record (Warden)
 
-## 4. Prerequisites
+### Bookings (`/api/bookings`)
+- `GET /api/bookings` — Fetch all booking applications
+- `GET /api/bookings/status/:uid` — Fetch booking status for a specific student
+- `POST /api/bookings` — Submit a new room booking (Resident)
+- `PUT /api/bookings/approve` — Approve booking & atomically update room beds (Warden)
+- `PUT /api/bookings/:id/reject` — Reject a booking request with feedback (Warden)
 
-- **Node.js** v18+ (v20 recommended) and npm
-- A **Firebase project** with:
-  - **Authentication** enabled (Email/Password, or whichever provider(s) the app uses)
-  - **Firestore Database** created (in Native mode)
-- (Optional, for the Express server's admin features) a **Firebase Admin service account** JSON
+### Maintenance (`/api/maintenance` & `/api/technician`)
+- `GET /api/maintenance/all` — Fetch all maintenance tickets
+- `POST /api/maintenance` — Submit a new maintenance ticket (Resident)
+- `PUT /api/maintenance/assign` — Assign a technician to a complaint (Warden)
+- `PUT /api/maintenance/complete` — Mark a ticket as resolved (Technician)
+- `GET /api/technician/tasks` — Fetch tasks filtered by technician or pending status
+- `PUT /api/technician/update` — Update task progress, notes, or resolution
+
+### Outings (`/api/outing`)
+- `GET /api/outing/all` — List all student outing requests
+- `POST /api/outing` — Submit a digital gate-pass request (Resident)
+- `PUT /api/outing/approve` — Approve or reject an outing request (Warden)
+
+### Announcements (`/api/announcements`)
+- `GET /api/announcements` — List latest notices
+- `POST /api/announcements` — Broadcast a new announcement (Warden)
+- `DELETE /api/announcements/:id` — Delete an announcement (Warden)
 
 ---
 
-## 5. Environment Variables
+## 6. Environment Variables
 
-### `client/.env`
+### Client (`client/.env`)
 
 ```env
 VITE_FIREBASE_API_KEY=your_firebase_api_key
@@ -207,206 +510,100 @@ VITE_FIREBASE_APP_ID=your_app_id
 VITE_API_BASE_URL=http://localhost:5000
 ```
 
-> These `VITE_FIREBASE_*` values come from **Firebase Console → Project Settings → Your apps →
-> SDK setup and configuration**. They identify a client-side web app and are safe to ship in a
-> frontend bundle — access is actually controlled by your **Firestore Security Rules**, not by
-> keeping this config secret. Still, avoid committing a real `.env` to a public repo as a matter
-> of hygiene, and make sure your Firestore rules restrict reads/writes by role before going live.
+> In production (`client/.env.production`), `VITE_API_BASE_URL` points to the Render backend:  
+> `VITE_API_BASE_URL=https://smarthostel-api.onrender.com`
 
-### `server/.env`
+### Server (`server/.env`)
 
 ```env
 PORT=5000
-# If/when you wire up firebase-admin routes, also add:
-# GOOGLE_APPLICATION_CREDENTIALS=./serviceAccountKey.json
-# or the individual FIREBASE_PROJECT_ID / FIREBASE_CLIENT_EMAIL / FIREBASE_PRIVATE_KEY vars
+DB_HOST=gateway01.ap-southeast-1.prod.aws.tidbcloud.com
+DB_PORT=3306
+DB_USER=your_tidb_username
+DB_PASSWORD=your_tidb_password
+DB_NAME=hostel_management
+DB_SSL=true
 ```
-
-The Admin SDK credentials **must** stay server-side and out of version control — this is the one
-secret in the stack that actually needs protecting.
 
 ---
 
-## 6. Installation
+## 7. Installation & Local Setup
 
-Clone the repo, then install each app's dependencies separately:
-
+### 1. Clone the repository
 ```bash
 git clone https://github.com/Mowlieswaran-G/hostel.git
 cd hostel
-
-# Frontend
-cd client
-npm install
-
-# Backend
-cd ../server
-npm install
 ```
 
----
-
-## 7. Seeding Firestore with Demo Data
-
-The root-level `.mjs` scripts populate Firestore directly using the Firebase client SDK
-(they reuse the same config as `client/.env`, hard-coded inline). Run them from wherever
-they live in your checkout, with Node's ES module support:
-
-```bash
-# 1. Seed the rooms collection (3 floors × 10 rooms, random occupancy)
-node seedRooms.mjs
-
-# 2. Seed maintenance requests, outing requests, announcements, and booking groups
-node seedAll.mjs
-```
-
-`seedAll.mjs` **clears each target collection before reseeding it**, so re-running it is safe
-for demo/dev purposes but destructive to any real data in those collections — don't run it
-against a production project.
-
----
-
-## 8. Running the App Locally
-
-You need **two terminals** — the client and server run independently.
-
-**Terminal 1 — Backend**
+### 2. Install Server Dependencies
 ```bash
 cd server
-npm run dev        # nodemon index.js → http://localhost:5000
+npm install
 ```
 
-**Terminal 2 — Frontend**
+### 3. Install Client Dependencies
+```bash
+cd ../client
+npm install
+```
+
+---
+
+## 8. Database Initialization & Seeding
+
+The server includes an automated setup script that creates the required MySQL database tables and seeds demo accounts, sample rooms, announcements, and mock complaints:
+
+```bash
+cd server
+node initDb.js
+```
+
+### Pre-configured Demo Accounts
+| Role | Email | Password |
+|---|---|---|
+| **Warden** | `warden@smarthostel.com` | `warden@123` |
+| **Technician** | `technician@smarthostel.com` | `tech@123` |
+| **Resident** | `mowlie@student.edu` | `student@123` (or use Google Sign-In) |
+
+---
+
+## 9. Running the App Locally
+
+Start the backend and frontend in separate terminals:
+
+### Terminal 1 — Backend (Express API)
+```bash
+cd server
+npm run dev        # nodemon index.js -> http://localhost:5000
+```
+
+### Terminal 2 — Frontend (Vite)
 ```bash
 cd client
-npm run dev         # vite → http://localhost:3000
+npm run dev        # vite -> http://localhost:3000
 ```
 
-Open **http://localhost:3000** in your browser. Sign up / log in (Firebase Auth), and you'll be
-routed to the dashboard matching your account's role (Resident / Warden / Technician).
-
-Other client scripts:
-```bash
-npm run build       # production build → client/dist
-npm run preview     # preview the production build locally
-npm run lint         # run Oxlint
-```
-
-Other server scripts:
-```bash
-npm start           # node index.js (no auto-reload)
-```
-
----
-
-## 9. End-to-End Execution Flow
-
-### 9.1 App bootstrap
-1. Browser loads `index.html`, which mounts `src/main.jsx` into `<div id="root">`.
-2. `main.jsx` wraps the app in `AuthContext` and `DataContext` providers, then renders `App.jsx`.
-3. `AuthContext` subscribes to Firebase's `onAuthStateChanged`. If a session exists, it loads the
-   user's profile/role from Firestore; otherwise the user is treated as logged out.
-4. `App.jsx`'s router redirects unauthenticated users to the login/signup screen, and
-   authenticated users to the dashboard for their role (`/resident`, `/warden`, or `/technician`).
-
-### 9.2 Login / Signup
-1. User submits credentials → client calls Firebase Auth SDK (`signInWithEmailAndPassword` /
-   `createUserWithEmailAndPassword`) directly — no round-trip to the Express server.
-2. On success, Firebase issues a session; `AuthContext` picks up the auth-state change, fetches
-   the matching user profile document from Firestore, and stores the resolved `role`.
-3. The router re-evaluates and sends the user to their role's dashboard.
-
-### 9.3 Dashboard data load
-1. On mount, dashboard pages call `useData()` from `DataContext`.
-2. `DataContext` fetches the relevant Firestore collections once and exposes them (`rooms`,
-   `bookingGroups`, `maintenanceRequests`, `outingRequests`, `announcements`) along with a
-   `ready` flag pages use to show `<Skeleton />` placeholders while loading.
-3. Pages filter/derive stats client-side (e.g. counts of pending/approved/resolved) rather than
-   querying Firestore multiple times.
-
-### 9.4 Room booking flow (Resident → Warden)
-1. **Resident** opens *Room Booking*, browses `rooms` (colour-coded by occupancy), and clicks
-   **Book** on an available room, entering optional group members' roll numbers.
-2. Client calls `createBooking()` (`src/services/booking.js`), which writes a new document to
-   the `bookingGroups` collection with `status: 'pending'`.
-3. `DataContext.refreshCollection('bookingGroups')` re-fetches so *My Bookings* reflects the new
-   pending request immediately.
-4. **Warden** opens *Booking Approval*, sees the pending row, and clicks **Approve** or
-   **Reject**.
-   - Approve → `approveBooking()` updates the booking's status to `approved` **and** increments
-     the room's `occupiedBeds` by the group's member count.
-   - Reject → `rejectBooking()` sets `status: 'rejected'`.
-5. Both collections (`bookingGroups`, `rooms`) are refreshed so occupancy figures and booking
-   status update across the app without a full page reload.
-
-### 9.5 Maintenance request flow (Resident → Technician/Warden)
-1. **Resident** submits a request (category, issue description, priority) from
-   *Maintenance Request* → writes to `maintenanceRequests` with `status: 'pending'`.
-2. **Warden** (*Maintenance Mgmt*) or **Technician** (*Technician Dashboard*) sees the new
-   pending item, assigns a technician (Warden) or self-accepts (Technician), which sets
-   `status: 'inProgress'` and `assignedTo`.
-3. Once fixed, the technician marks it **Resolve**, setting `status: 'resolved'` and
-   `resolvedAt`.
-4. The *Heatmap* page (Technician) aggregates `maintenanceRequests` by room/floor to visualise
-   which rooms generate the most complaints.
-
-### 9.6 Outing request flow (Resident → Warden)
-1. **Resident** submits an outing request (destination, out date, return date, reason) →
-   written to `outingRequests` with `status: 'pending'`.
-2. **Warden** reviews pending requests in *Outing Approval* and clicks **Approve** or **Reject**
-   (rejection can include a reason), updating the document's `status`.
-3. The resident sees the updated status reflected on their own dashboard/history view.
-
-### 9.7 Announcements
-- Wardens post announcements (title, body, priority) which are stored in the `announcements`
-  collection and surfaced to all roles on their respective dashboards, most-recent first.
-
-### 9.8 Production build & deploy
-1. `npm run build` in `client/` runs Vite's production build, code-splitting vendor libraries
-   (`react`/`react-router-dom`, `firebase`, `recharts`) into separate chunks per
-   `vite.config.js`'s `manualChunks`.
-2. Deploying `client/` to **Vercel**: `vercel.json` rewrites every path to `/index.html`, which is
-   required for a client-side-routed SPA (React Router) so deep links and refreshes don't 404.
-3. `server/` can be deployed to any Node host (Render, Railway, a VM, etc.) — it's a standard
-   Express app started with `npm start`. Update `VITE_API_BASE_URL` in the client's environment
-   to point at that deployed backend URL.
-
----
-
-## 10. Notes & Recommendations
-
-- **Firestore Security Rules** are the actual access-control boundary for this architecture
-  since the client talks to Firestore directly — make sure rules restrict writes by
-  authenticated role (e.g. only wardens can update `status` on bookings/requests) before
-  deploying publicly.
-- The Express server is currently a thin scaffold; if you move privileged logic there (e.g.
-  approvals verified server-side with `firebase-admin`), remember to also lock down the
-  corresponding Firestore rules so the same actions can't be performed directly from the client.
-- `seedAll.mjs` and `seedRooms.mjs` hard-code Firebase config inline — keep them pointed at a
-  dev/staging project only.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
 ## Contributing
 
-Contributions are welcome! To contribute:
+Contributions are warmly welcomed! To get started:
+1. Fork the project.
+2. Create your feature branch (`git checkout -b feat/your-feature-name`).
+3. Commit your changes (`git commit -m "feat: add your feature"`).
+4. Push to your branch (`git push origin feat/your-feature-name`).
+5. Open a Pull Request.
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/your-feature`)
-3. Commit your changes (`git commit -m "feat: add your feature"`)
-4. Push to the branch (`git push origin feature/your-feature`)
-5. Open a Pull Request
-
-Please keep PRs focused and run `npm run lint` in `client/` before submitting.
+---
 
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
 
----
-
 <div align="center">
 
-Made with 💜 for better hostel living
+Made with 💜 for efficient and modern hostel living
 
 </div>
